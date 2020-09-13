@@ -1,0 +1,2 @@
+# pwsh-wrapper
+pwsh
