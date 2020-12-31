@@ -115,7 +115,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     This will take quite some time!!!\nNo progress bar is shown!", "Message", MB_ICONWARNING | MB_OK);
 
     GetCurrentDirectoryW(MAX_PATH+1, cur_dirW);
-    SetCurrentDirectoryW(L"%SystemDrive%\\windows\\temp\\");
+    SetCurrentDirectoryW(L"%TEMP%");
     fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "Downloading File From: %s, To: %s \n", url, destination); fwprintf(stderr, L"\033[0m\n");
 
     if( URLDownloadToFileA(NULL, url, destination, 0, NULL) != S_OK )
