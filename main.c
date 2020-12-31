@@ -20,11 +20,6 @@
  * powershell.exe -command &{'{0}.{1}' -f $PSVersionTable.PSVersion.Major, $PSVersionTable.PSVersion.Minor}
  * powershell.exe (Get-PSDrive C).Free
  * powershell.exe -noLogo -noExit  -c Register-WMIEvent -Query 'SELECT * FROM Win32_DeviceChangeEvent WHERE (EventType = 2 OR EventType = 3) GROUP WITHIN 4' -Action { [System.Console]::WriteLine('Devices Changed') }
-
- * Downloads
- * https://github.com/PowerShell/PowerShell/releases/download/v7.1.0/PowerShell-7.1.0-win-x64.msi
- * https://github.com/PowerShell/PowerShell/releases/download/v7.1.0/PowerShell-7.1.0-win-x86.msi
- * install (e.g.): wine msiexec /i PowerShell-7.1.0-win-x64.msi INSTALLFOLDER="C:\\Powershell6\\" /q
  *
  * Compile:
  *
@@ -84,8 +79,8 @@ int __cdecl wmain(int argc, WCHAR *argv[])
 {
     int i, cmd_idx = 0;
 
-    char url[] = "https://github.com/PowerShell/PowerShell/releases/download/v7.1.0/PowerShell-7.1.0-win-x64.msi";
-    char destination[] = "PowerShell-7.1.0-win-x64.msi";
+    char url[] = "https://github.com/PowerShell/PowerShell/releases/download/v7.0.3/PowerShell-7.0.3-win-x64.msi";
+    char destination[] = "PowerShell-7.0.3-win-x64.msi";
 
     /* FIXME Install ConEmu to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780 */ 
     char urlcon[] = "https://conemu.github.io/install2.ps1";
@@ -128,18 +123,18 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     else
         fprintf(stderr, "File Successfully Downloaded \n");
 
-    system("start /WAIT msiexec.exe /i PowerShell-7.1.0-win-x64.msi /*INSTALLFOLDER=\"C:\\Windows\\Powershell6\\\"*/ /q");
+    system("start /WAIT msiexec.exe /i PowerShell-7.0.3-win-x64.msi /*INSTALLFOLDER=\"C:\\Windows\\Powershell6\\\"*/ /q");
 
     if( URLDownloadToFileA(NULL, urlcon, destinationcon, 0, NULL) != S_OK )
         goto failed;
     else
-        fprintf(stderr, "File Successfully Downloaded \n");
+        {fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "File Successfully Downloaded \n"); fwprintf(stderr, L"\033[0m\n");}
 
     system("start /WAIT pwsh.exe -file install2.ps1");
 
     SetCurrentDirectoryW(cur_dirW);
 
-    fprintf(stderr, "FIXME Waiting for 5 secs to finish things, otherwise it just fails on first run...  \n");
+    fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "FIXME Waiting for 5 secs to finish things, otherwise it just fails on first run...  \n"); fwprintf(stderr, L"\033[0m\n");
     Sleep(5000);
 
 already_installed:
@@ -222,6 +217,6 @@ already_installed:
     return 0;
 
 failed:
-    fprintf(stderr, "Something went wrong :( (32-bit?, winversion <win7?, ....  \n");
+    fprintf(stderr, "Something went wrong :( (32-bit?, winversion < win7?, failing download?....  \n");
     return 0; /* fake success anyway */
 }
