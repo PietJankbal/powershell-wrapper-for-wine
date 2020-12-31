@@ -86,7 +86,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     char urlcon[] = "https://conemu.github.io/install2.ps1";
     char destinationcon[] = "install2.ps1";
 
-    const WCHAR pwsh_exeW[] = L"pwsh.exe";
+    const WCHAR pwsh_exeW[] = L"pwsh.exe"; WCHAR tempW[MAX_PATH];
     WCHAR start_conemuW[MAX_PATH] = L"%SystemDrive%\\ConEmu\\ConEmu.exe";
     WCHAR cur_dirW[MAX_PATH];
     WCHAR cmdlineW [MAX_PATH]=L"";
@@ -114,8 +114,8 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     MessageBoxA(NULL, "Looks like Powershell Core is not installed \nWill start downloading and install now\n \
     This will take quite some time!!!\nNo progress bar is shown!", "Message", MB_ICONWARNING | MB_OK);
 
-    GetCurrentDirectoryW(MAX_PATH+1, cur_dirW);
-    SetCurrentDirectoryW(L"%TEMP%");
+    GetCurrentDirectoryW(MAX_PATH+1, cur_dirW); GetTempPath(MAX_PATH, tempW);
+    SetCurrentDirectoryW(tempW);
     fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "Downloading File From: %s, To: %s \n", url, destination); fwprintf(stderr, L"\033[0m\n");
 
     if( URLDownloadToFileA(NULL, url, destination, 0, NULL) != S_OK )
