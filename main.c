@@ -116,19 +116,19 @@ int __cdecl wmain(int argc, WCHAR *argv[])
 
     GetCurrentDirectoryW(MAX_PATH+1, cur_dirW); GetTempPath(MAX_PATH, tempW);
     SetCurrentDirectoryW(tempW);
-    fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "Downloading File From: %s, To: %s \n", url, destination); fwprintf(stderr, L"\033[0m\n");
+    fprintf(stderr, L"\033[1;34mDownloading File From: %s, To: %s \n\033[0m\n", url, destination);
 
     if( URLDownloadToFileA(NULL, url, destination, 0, NULL) != S_OK )
         goto failed;
     else
-        {fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "File Successfully Downloaded \n"); fwprintf(stderr, L"\033[0m\n");}
+        fprintf(stderr, L"\033[1;34mFile Successfully Downloaded \n\033[0m\n");
 
     system("start /WAIT msiexec.exe /i PowerShell-7.0.3-win-x64.msi /*INSTALLFOLDER=\"C:\\Windows\\Powershell6\\\"*/ /q");
 
     if( URLDownloadToFileA(NULL, urlcon, destinationcon, 0, NULL) != S_OK )
         goto failed;
     else
-        {fwprintf(stderr, L"\033[1;34m"); fprintf(stderr, "File Successfully Downloaded \n"); fwprintf(stderr, L"\033[0m\n");}
+        fprintf(stderr, L"\033[1;34mFile Successfully Downloaded \n\033[0m\n");
 
     system("start /WAIT pwsh.exe -file install2.ps1");
 
