@@ -200,7 +200,7 @@ already_installed:
         lstrcpyW( cmdlineW, bufW ); HeapFree(GetProcessHeap(), 0, bufW);
     }
 
-    fwprintf(stderr, L"\033[1;93mnew command line is %ls \n\033[0m\n", bufW);
+    fwprintf(stderr, L"\033[1;93mnew command line is %ls \n\033[0m\n", cmdlineW);
 
     new_args[0] = pwsh_exeW;
     new_args[1] = cmdlineW;
