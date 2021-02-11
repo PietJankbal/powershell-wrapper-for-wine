@@ -17,7 +17,7 @@ That's really it...
 
 # Notes about Waves Central:
 - After install the 1st run will still fail with message that powershell failed; cd into the directory where the program is and try again. That message should be gone then. 
-- To avoid black window: run with "wine Waves\ Central.exe --disable-gpu" 
+- To avoid black window: run with "WINEDLLOVERRIDES=libglesv2=d wine Waves\ Central.exe" 
 - Using regular wine (instead of wine-staging) also might need "winetricks arial"
 
 - Newer Waves version like 12.0.5 and maybe some earlier versions fail with "Central has encountered a system
