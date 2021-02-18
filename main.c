@@ -87,7 +87,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     char destinationcon[] = "install2.ps1";
 
     const WCHAR pwsh_exeW[] = L"pwsh.exe"; WCHAR tempW[MAX_PATH];
-    WCHAR start_conemuW[MAX_PATH] = L"start %SystemDrive%\\ConEmu\\ConEmu.exe";
+    WCHAR start_conemuW[MAX_PATH];
     WCHAR cur_dirW[MAX_PATH];
     WCHAR cmdlineW [MAX_PATH]=L"";
     WCHAR cmdW[MAX_PATH] = L"-c ";
@@ -99,8 +99,10 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     RTL_OSVERSIONINFOEXW info;
 
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
-
     lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe");
+
+    if(!ExpandEnvironmentStringsW(L"%SystemDrive%", start_conemuW, MAX_PATH+1)) goto failed; 
+    lstrcatW(start_conemuW, L"\\ConEmu\\ConEmu.exe");
 
     if ( (GetFileAttributesW(pwsh_pathW) != INVALID_FILE_ATTRIBUTES) )
         goto already_installed;
@@ -202,18 +204,20 @@ already_installed:
 
     fwprintf(stderr, L"\033[1;93mnew command line is %ls \n\033[0m\n", cmdlineW);
 
-    new_args[0] = pwsh_exeW;
-    new_args[1] = cmdlineW;
-    new_args[2] = NULL;
+    int mode = 0; /* _P_WAIT */
 
-    /* HACK  It crashes with Invalid Handle if -noexit is present or just e.g. "powershell -nologo"; if powershellconsole is started it doesn`t crash... */
-    if(!cmd_idx || contains_noexit)
+    if(!cmd_idx || contains_noexit)  
     {
-         _wsystem(lstrcatW(lstrcatW(start_conemuW, L" -resetdefault -run pwsh.exe "), cmdlineW));
-         return 0;
+        WCHAR conemu_optionsW[] = L" -resetdefault -run pwsh.exe ";
+        new_args[0] = start_conemuW; new_args[1] = lstrcatW(conemu_optionsW, cmdlineW); new_args[2] = NULL; 
     }
-
-    _wspawnv(2/*_P_OVERLAY*/, pwsh_pathW, new_args);
+    else
+    {
+        mode = 2; /*_P_OVERLAY*/
+        new_args[0] = pwsh_exeW; new_args[1] = cmdlineW; new_args[2] = NULL;
+    }
+ 
+    _wspawnv(mode, !mode ? start_conemuW : pwsh_pathW, new_args);
     return 0;
 
 failed:
