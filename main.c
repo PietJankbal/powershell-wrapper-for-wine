@@ -87,7 +87,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     char destinationcon[] = "install2.ps1";
 
     const WCHAR pwsh_exeW[] = L"pwsh.exe"; WCHAR tempW[MAX_PATH];
-    WCHAR start_conemuW[MAX_PATH] = L"%SystemDrive%\\ConEmu\\ConEmu.exe";
+    WCHAR start_conemuW[MAX_PATH] = L"start %SystemDrive%\\ConEmu\\ConEmu.exe";
     WCHAR cur_dirW[MAX_PATH];
     WCHAR cmdlineW [MAX_PATH]=L"";
     WCHAR cmdW[MAX_PATH] = L"-c ";
