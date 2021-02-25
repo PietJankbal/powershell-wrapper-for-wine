@@ -26,6 +26,7 @@
  */
 #define WIN32_LEAN_AND_MEAN
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 #include <windows.h>
 #include <winuser.h>
 #include <winternl.h>
@@ -72,7 +73,6 @@ int __cdecl wmain(int argc, WCHAR *argv[])
 {
     int i, cmd_idx = 0;
     WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];//, pwsh_exeW[] = L"pwsh.exe";
-    WCHAR pwsh_exeW[] = L"pwsh.exe", conemuW[] = L"ConEmu.exe";
     
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
     lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe");
@@ -181,12 +181,12 @@ already_installed:
         WCHAR start_conemuW[MAX_PATH], conemu_optionsW[MAX_PATH] = L" -Title \"This is Powershell Core (pwsh.exe), not (!) powershell.exe\" -resetdefault -run ";
         if(!ExpandEnvironmentStringsW(L"%SystemDrive%", start_conemuW, MAX_PATH+1)) goto failed; 
         lstrcatW(start_conemuW, L"\\ConEmu\\ConEmu.exe");
-        new_args[0] = conemuW; new_args[1] = lstrcatW( lstrcatW(conemu_optionsW, pwsh_pathW), cmdlineW); new_args[2] = NULL;
+        new_args[0] = L"ConEmu.exe"; new_args[1] = lstrcatW( lstrcatW(conemu_optionsW, pwsh_pathW), cmdlineW); new_args[2] = NULL;
         _wspawnv(1 /* _P_NOWAIT */, start_conemuW, new_args);
     }
     else
     {
-        new_args[0] = pwsh_exeW; new_args[1] = cmdlineW; new_args[2] = NULL;
+        new_args[0] = L"pwsh.exe"; new_args[1] = cmdlineW; new_args[2] = NULL;
         _wspawnv(2 /*_P_OVERLAY*/, pwsh_pathW, new_args);
     }
     return 0;
