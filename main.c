@@ -1,5 +1,4 @@
-/*
- * powershell.exe - this program only calls pwsh.exe
+/* powershell.exe - this program only calls pwsh.exe
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -159,7 +158,8 @@ already_installed:
     /* feed it the desired output like below ....                                                                                            */
     /* put replacements here....        from                                         to                                                      */
     const WCHAR from_to[][MAX_PATH] = { L"[System.Math]::sqrt(64)",                  L"Write-Host 8",  /* just an example, not necassary.... */
-                                        L"Get-WmiObject",                            L"Get-CimInstance"
+                                        L"Get-WmiObject",                            L"Get-CimInstance",
+                                        L"Register-WMIEvent",                        L"Register-CimIndicationEvent"
                                       };
 
     if(cmd_idx)
