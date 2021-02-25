@@ -72,10 +72,10 @@ wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *r
 int __cdecl wmain(int argc, WCHAR *argv[])
 {
     int i, cmd_idx = 0;
-    WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];//, pwsh_exeW[] = L"pwsh.exe";
+    WCHAR pwsh_pathW[MAX_PATH]=L"\"", *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];//, pwsh_exeW[] = L"pwsh.exe";
 
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
-    lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe");
+    lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe\"");
 
     if ( (GetFileAttributesW(pwsh_pathW) != INVALID_FILE_ATTRIBUTES) )
         goto already_installed;
