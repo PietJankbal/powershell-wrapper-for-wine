@@ -181,12 +181,12 @@ already_installed:
         WCHAR conemu_optionsW[MAX_PATH] = L" -Title \"This is Powershell Core (pwsh.exe), not (!) powershell.exe\" -resetdefault -run ";
         if(!ExpandEnvironmentStringsW(L"%SystemDrive%", start_conemuW, MAX_PATH+1)) goto failed; 
         lstrcatW(start_conemuW, L"\\ConEmu\\ConEmu.exe");
-        new_args[0] = L"ConEmu.exe"; new_args[1] = lstrcatW( lstrcatW(conemu_optionsW, pwsh_pathW), cmdlineW); new_args[2] = NULL;
+        new_args[0] = start_conemuW; new_args[1] = lstrcatW( lstrcatW(conemu_optionsW, pwsh_pathW), cmdlineW); new_args[2] = NULL;
         _wspawnv(1 /* _P_NOWAIT */, start_conemuW, new_args);
     }
     else
     {
-        new_args[0] = /*pwsh_exeW*/L"pwsh.exe"; new_args[1] = cmdlineW; new_args[2] = NULL;
+        new_args[0] = pwsh_pathW; new_args[1] = cmdlineW; new_args[2] = NULL;
         _wspawnv(2 /*_P_OVERLAY*/, pwsh_pathW, new_args);
     }
     return 0;
