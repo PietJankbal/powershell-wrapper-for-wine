@@ -21,13 +21,10 @@
  * powershell.exe (Get-PSDrive C).Free
  * powershell.exe -noLogo -noExit  -c Register-WMIEvent -Query 'SELECT * FROM Win32_DeviceChangeEvent WHERE (EventType = 2 OR EventType = 3) GROUP WITHIN 4' -Action { [System.Console]::WriteLine('Devices Changed') }
  *
- * Compile:
- *
+ * Compile: *
  * i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell.exe
- *
  * x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell.exe
  */
-
 #define WIN32_LEAN_AND_MEAN
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -39,8 +36,6 @@
 #include <stdlib.h>
 #include <urlmon.h>
 #include <wchar.h>
-
-NTSTATUS WINAPI RtlGetVersion(RTL_OSVERSIONINFOEXW*);
 
 /* Following function taken from https://creativeandcritical.net/downloads/replacebench.c which is in public domain; Credits to the there mentioned authors*/
 /* replaces in the string "str" all the occurrences of the string "sub" with the string "rep" */
@@ -78,40 +73,29 @@ wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *r
 int __cdecl wmain(int argc, WCHAR *argv[])
 {
     int i, cmd_idx = 0;
-
-    char url[] = "https://github.com/PowerShell/PowerShell/releases/download/v7.0.3/PowerShell-7.0.3-win-x64.msi";
-    char destination[] = "PowerShell-7.0.3-win-x64.msi";
-
-    /* FIXME Install ConEmu to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780 */ 
-    char urlcon[] = "https://conemu.github.io/install2.ps1", destinationcon[] = "install2.ps1";
-
-    WCHAR tempW[MAX_PATH], start_conemuW[MAX_PATH], pwsh_pathW[MAX_PATH], *bufW = NULL, cur_dirW[MAX_PATH];
-    WCHAR cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c ";
-    const WCHAR *new_args[3], pwsh_exeW[] = L"pwsh.exe";
-
-    BOOL contains_noexit = 0;
-    RTL_OSVERSIONINFOEXW info;
+    WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];//, pwsh_exeW[] = L"pwsh.exe";
 
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
     lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe");
 
-    if(!ExpandEnvironmentStringsW(L"%SystemDrive%", start_conemuW, MAX_PATH+1)) goto failed; 
-    lstrcatW(start_conemuW, L"\\ConEmu\\ConEmu.exe");
-
     if ( (GetFileAttributesW(pwsh_pathW) != INVALID_FILE_ATTRIBUTES) )
         goto already_installed;
-
-    /* Download */
+    /* Download and install*/
+    char url[] = "https://github.com/PowerShell/PowerShell/releases/download/v7.0.3/PowerShell-7.0.3-win-x64.msi";
+    char destination[] = "PowerShell-7.0.3-win-x64.msi";
+    /* FIXME Install ConEmu to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780 */ 
+    char urlcon[] = "https://conemu.github.io/install2.ps1", destinationcon[] = "install2.ps1";
+    NTSTATUS WINAPI RtlGetVersion(RTL_OSVERSIONINFOEXW*); RTL_OSVERSIONINFOEXW info;
+    WCHAR tempW[MAX_PATH], cur_dirW[MAX_PATH];
 
     info.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
-    if (RtlGetVersion(&info)) goto failed;;
+    if (RtlGetVersion(&info)) goto failed;
     if (info.dwMajorVersion < 6 || (info.dwMajorVersion == 6 && info.dwMinorVersion < 1) ) goto failed;
 
     MessageBoxA(NULL, "Looks like Powershell Core is not installed \nWill start downloading and install now\n \
     This will take quite some time!!!\nNo progress bar is shown!", "Message", MB_ICONWARNING | MB_OK);
 
-    GetCurrentDirectoryW(MAX_PATH+1, cur_dirW); GetTempPath(MAX_PATH, tempW);
-    SetCurrentDirectoryW(tempW);
+    GetCurrentDirectoryW(MAX_PATH+1, cur_dirW); GetTempPath(MAX_PATH, tempW); SetCurrentDirectoryW(tempW);
     fwprintf(stderr, L"\033[1;34mDownloading File From: %s, To: %s \n\033[0m\n", url, destination);
 
     if( URLDownloadToFileA(NULL, url, destination, 0, NULL) != S_OK )
@@ -130,9 +114,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     memset(&startup_info, 0, sizeof(STARTUPINFO)); memset(&process_info, 0, sizeof(PROCESS_INFORMATION));
     startup_info.cb = sizeof(STARTUPINFO);
 
-    CreateProcessW(pwsh_pathW,L" -file install2.ps1",0,0,0,0,0,0,&startup_info,&process_info);
-
-    SetCurrentDirectoryW(cur_dirW);
+    CreateProcessW(pwsh_pathW,L" -file install2.ps1",0,0,0,0,0,0,&startup_info,&process_info); SetCurrentDirectoryW(cur_dirW);
 
     fwprintf(stderr, L"\033[1;34mFIXME Waiting for 5 secs to finish things, otherwise it just fails on first run...  \n\033[0m\n");
     Sleep(5000);
@@ -141,17 +123,14 @@ already_installed:
 
     for (i = 1; i < argc; i++) /* concatenate all args into one single commandline */
     {
-        if (!_wcsnicmp(L"-ve", argv[i],3)) i +=2;    /* -Version, just skip*/
+        if (!_wcsnicmp(L"-ve", argv[i],3) || !_wcsnicmp(L"-noe", argv[i],4)) i +=2;    /* -Version or -NoExit, just skip for now*/
         if(!argv[i]) break;
         lstrcatW(cmdlineW, L" "); lstrcatW(cmdlineW, argv[i]); 
-        if (!_wcsnicmp(L"-noe", argv[i],4)) contains_noexit++;   /* -NoExit */
     }
 
-    i = 1;
-
-     /* pwsh requires a command option "-c" , powershell doesn`t e.g. "powershell -NoLogo echo $env:username" should go
+    i = 1; fwprintf(stderr, L"\033[1;35m"); fwprintf(stderr, L"\nold command line is %ls \n", cmdlineW); fwprintf(stderr, L"\033[0m\n");
+     /* pwsh requires a command option "-c" , powershell doesn`t, so we have to insert it e.g. "powershell -NoLogo echo $env:username" should go
     into "pwsh -NoLogo -c echo $env:username".... */
-
     while(i<argc) /* Step through all options until we reach command */
     {
         if ( !_wcsnicmp(L"-c", argv[i],2) )    /* -Command or -c */
@@ -164,10 +143,10 @@ already_installed:
              !_wcsnicmp(L"-ve", argv[i],3) ||  /* -Version */           !_wcsnicmp(L"-in", argv[i],3) ||  /* -InputFormat */ \
              !_wcsnicmp(L"-ou", argv[i],3) ||  /* -OutputFormat */      !_wcsnicmp(L"-wi", argv[i],3) ||  /* -WindowStyle */ \
              !_wcsnicmp(L"-en", argv[i],3) ||  /* -EncodedCommand */    !_wcsnicmp(L"-ex", argv[i],3)     /* -ExecutionPolicy */ )
-             {
-                 i++;
-                 goto done;
-             }
+        {
+             i++;
+             goto done;
+        }
 
         if ( !_wcsnicmp(L"-", argv[i],1) ) goto done;      /* -nologo or -noexit etc.*/
         /* We should now have arrived at (1st) command */
@@ -183,8 +162,6 @@ already_installed:
                                         L"Get-WmiObject",                            L"Get-CimInstance"
                                       };
 
-    fwprintf(stderr, L"\033[1;35m"); fwprintf(stderr, L"\nold command line is %ls \n", cmdlineW); fwprintf(stderr, L"\033[0m\n");
-
     if(cmd_idx)
     {
         bufW = replace_smart(cmdlineW, argv[cmd_idx], cmdW);
@@ -199,20 +176,19 @@ already_installed:
 
     fwprintf(stderr, L"\033[1;93mnew command line is %ls \n\033[0m\n", cmdlineW);
 
-    int mode = 1; /* _P_NOWAIT */
-
-    if(!cmd_idx || contains_noexit)  
+    if(!cmd_idx)  
     {
         WCHAR conemu_optionsW[MAX_PATH] = L" -Title \"This is Powershell Core (pwsh.exe), not (!) powershell.exe\" -resetdefault -run ";
-        new_args[0] = start_conemuW; new_args[1] = lstrcatW( lstrcatW(conemu_optionsW, pwsh_pathW), cmdlineW); new_args[2] = NULL; 
+        if(!ExpandEnvironmentStringsW(L"%SystemDrive%", start_conemuW, MAX_PATH+1)) goto failed; 
+        lstrcatW(start_conemuW, L"\\ConEmu\\ConEmu.exe");
+        new_args[0] = L"ConEmu.exe"; new_args[1] = lstrcatW( lstrcatW(conemu_optionsW, pwsh_pathW), cmdlineW); new_args[2] = NULL;
+        _wspawnv(1 /* _P_NOWAIT */, start_conemuW, new_args);
     }
     else
     {
-        mode = 2; /*_P_OVERLAY*/
-        new_args[0] = pwsh_exeW; new_args[1] = cmdlineW; new_args[2] = NULL;
+        new_args[0] = /*pwsh_exeW*/L"pwsh.exe"; new_args[1] = cmdlineW; new_args[2] = NULL;
+        _wspawnv(2 /*_P_OVERLAY*/, pwsh_pathW, new_args);
     }
- 
-    _wspawnv(mode, mode == 1 ? start_conemuW : pwsh_pathW, new_args);
     return 0;
 
 failed:
