@@ -75,7 +75,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     WCHAR pwsh_exeW[] = L"pwsh.exe", conemuW[] = L"ConEmu.exe";
     
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
-    lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe'");
+    lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe");
 
     if ( (GetFileAttributesW(pwsh_pathW) != INVALID_FILE_ATTRIBUTES) )
         goto already_installed;
