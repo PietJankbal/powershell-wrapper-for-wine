@@ -21,8 +21,8 @@
  * powershell.exe -noLogo -noExit  -c Register-WMIEvent -Query 'SELECT * FROM Win32_DeviceChangeEvent WHERE (EventType = 2 OR EventType = 3) GROUP WITHIN 4' -Action { [System.Console]::WriteLine('Devices Changed') }
  *
  * Compile: *
- * i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell.exe
- * x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell.exe
+ * i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell32.exe
+ * x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell64.exe
  */
 #define WIN32_LEAN_AND_MEAN
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -72,7 +72,7 @@ wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *r
 int __cdecl wmain(int argc, WCHAR *argv[])
 {
     int i, cmd_idx = 0;
-    WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];//, pwsh_exeW[] = L"pwsh.exe";
+    WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];
     
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
     lstrcatW(pwsh_pathW, L"\\Powershell\\7\\pwsh.exe");
@@ -117,7 +117,7 @@ int __cdecl wmain(int argc, WCHAR *argv[])
 
     fwprintf(stderr, L"\033[1;34mFIXME Waiting for 5 secs to finish things, otherwise it just fails on first run...  \n\033[0m\n");
     Sleep(5000);
-
+    /* End download and install*/
 already_installed:
 
     for (i = 1; i < argc; i++) /* concatenate all args into one single commandline */
@@ -128,18 +128,16 @@ already_installed:
     }
 
     i = 1; fwprintf(stderr, L"\033[1;35m"); fwprintf(stderr, L"\nold command line is %ls \n", cmdlineW); fwprintf(stderr, L"\033[0m\n");
-     /* pwsh requires a command option "-c" , powershell doesn`t, so we have to insert it e.g. "powershell -NoLogo echo $env:username" should go
+     /* pwsh requires a command option "-c" , powershell doesn`t, so we have to insert it somewhere e.g. "powershell -NoLogo echo $env:username" should go
     into "pwsh -NoLogo -c echo $env:username".... */
     while(i<argc) /* Step through all options until we reach command */
     {
-        if ( !_wcsnicmp(L"-c", argv[i],2) )    /* -Command or -c */
-        {
-            cmd_idx = i;
-            break;
-        }     
+        if ( !_wcsnicmp(L"-c", argv[i],2) )    { cmd_idx = i; break; }            /* -Command or -c */
+           
+        if ( !_wcsnicmp(L"-f", argv[i],2)      { cmd_idx = i; i ++; goto done; }  /* -File */
+            
         /* try handle something like powershell -nologo -windowstyle normal -outputformat text -version 1.0 echo \$env:username */
-        if ( !_wcsnicmp(L"-f", argv[i],2)  ||  /* -File */              !_wcsnicmp(L"-ps", argv[i],3) ||  /* -PSConsoleFile */ \
-             !_wcsnicmp(L"-ve", argv[i],3) ||  /* -Version */           !_wcsnicmp(L"-in", argv[i],3) ||  /* -InputFormat */ \
+        if ( !_wcsnicmp(L"-ps", argv[i],3) ||  /* -PSConsoleFile */     !_wcsnicmp(L"-in", argv[i],3) ||  /* -InputFormat */ \
              !_wcsnicmp(L"-ou", argv[i],3) ||  /* -OutputFormat */      !_wcsnicmp(L"-wi", argv[i],3) ||  /* -WindowStyle */ \
              !_wcsnicmp(L"-en", argv[i],3) ||  /* -EncodedCommand */    !_wcsnicmp(L"-ex", argv[i],3)     /* -ExecutionPolicy */ )
         {
