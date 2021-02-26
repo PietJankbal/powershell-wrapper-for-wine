@@ -71,7 +71,7 @@ wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *r
 
 int __cdecl wmain(int argc, WCHAR *argv[])
 {
-    int i, cmd_idx = 0; runfile = 0;
+    int i, cmd_idx = 0, runfile = 0;
     WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];
     
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
