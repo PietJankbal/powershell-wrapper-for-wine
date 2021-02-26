@@ -71,7 +71,7 @@ wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *r
 
 int __cdecl wmain(int argc, WCHAR *argv[])
 {
-    int i, cmd_idx = 0;
+    int i, cmd_idx = 0; runfile = 0;
     WCHAR pwsh_pathW[MAX_PATH], *bufW = NULL, cmdlineW [MAX_PATH]=L"", cmdW[MAX_PATH] = L"-c "; const WCHAR *new_args[3];
     
     if(!ExpandEnvironmentStringsW(L"%ProgramW6432%", pwsh_pathW, MAX_PATH+1)) goto failed; /* win32 only apparently, not supported... */
@@ -134,7 +134,7 @@ already_installed:
     {
         if ( !_wcsnicmp(L"-c", argv[i],2) )    { cmd_idx = i; break; }            /* -Command or -c */
            
-        if ( !_wcsnicmp(L"-f", argv[i],2)      { cmd_idx = i; i ++; goto done; }  /* -File */
+        if ( !_wcsnicmp(L"-f", argv[i],2)      { runfile++; i++; goto done; }  /* -File */
             
         /* try handle something like powershell -nologo -windowstyle normal -outputformat text -version 1.0 echo \$env:username */
         if ( !_wcsnicmp(L"-ps", argv[i],3) ||  /* -PSConsoleFile */     !_wcsnicmp(L"-in", argv[i],3) ||  /* -InputFormat */ \
@@ -174,7 +174,7 @@ already_installed:
 
     fwprintf(stderr, L"\033[1;93mnew command line is %ls \n\033[0m\n", cmdlineW);
 
-    if(!cmd_idx)  
+    if(!cmd_idx && !runfile)  
     {
         WCHAR start_conemuW[MAX_PATH], conemu_optionsW[MAX_PATH] = L" -Title \"This is Powershell Core (pwsh.exe), not (!) powershell.exe\" -resetdefault -run ";
         if(!ExpandEnvironmentStringsW(L"%SystemDrive%", start_conemuW, MAX_PATH+1)) goto failed; 
