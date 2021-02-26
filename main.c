@@ -134,7 +134,7 @@ already_installed:
     {
         if ( !_wcsnicmp(L"-c", argv[i],2) )    { cmd_idx = i; break; }            /* -Command or -c */
            
-        if ( !_wcsnicmp(L"-f", argv[i],2)      { runfile++; i++; goto done; }  /* -File */
+        if ( !_wcsnicmp(L"-f", argv[i],2) )      { runfile++; i++; goto done; }  /* -File */
             
         /* try handle something like powershell -nologo -windowstyle normal -outputformat text -version 1.0 echo \$env:username */
         if ( !_wcsnicmp(L"-ps", argv[i],3) ||  /* -PSConsoleFile */     !_wcsnicmp(L"-in", argv[i],3) ||  /* -InputFormat */ \
