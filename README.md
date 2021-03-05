@@ -20,10 +20,10 @@ That's really it...
 
 - After install the 1st run will still fail with message that powershell failed; cd into the directory where the program is and try again. That message should be gone then.
 
-- To avoid black window: run with Wine-staging >6.3; this bug should be fixed in the most recent wine-(staging) versions 
+- To avoid black window: run with Wine-staging >= 6.3; this bug should be fixed in the most recent wine-(staging) versions 
 
 - Newer Waves version like 12.0.5 and maybe some earlier versions fail with "Central has encountered a system
-permissions issue". Run with Wine-staging >6.4; this bug should be fixed in upcoming Wine-Staging 6.4.
+permissions issue". Run with Wine-staging >= 6.4; this bug should be fixed in upcoming Wine-Staging 6.4.
 
 
 
