@@ -3,13 +3,13 @@
 Wrapper for powershell.exe from wine, that gets Waves Central in wine a bit going.
 Uses pwsh.exe from Powershell Core to get at least some functionality for powershell.exe from wine.
 
-# Install (Assuming ~/.wine is where your wineprefix is):
+# Install 
 
-wget https://github.com/PietJankbal/powershell-wrapper/raw/master/powershell64.exe && cp -rf ./powershell64.exe ~/.wine/drive_c/windows/system32/WindowsPowerShell/v1.0/powershell.exe
-
-wget https://github.com/PietJankbal/powershell-wrapper/raw/master/powershell32.exe && cp -rf ./powershell32.exe ~/.wine/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe
-
-That's really it...
+ wget https://github.com/PietJankbal/powershell-wrapper-for-wine/raw/master/install_pwshwrapper.exe
+ 
+ Then do:
+ 
+ wine install_pwshwrapper.exe
 
 # Notes:
 - Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. "wine powershell")
@@ -33,6 +33,11 @@ permissions issue". Run with Wine-staging >= 6.4; this bug should be fixed in up
   i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell32.exe
 
   x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell64.exe
+  
+  Then do (Assuming ~/.wine is where your wineprefix is)
+  
+  cp -rf ./powershell64.exe ~/.wine/drive_c/windows/system32/WindowsPowerShell/v1.0/powershell.exe
+  cp -rf ./powershell32.exe ~/.wine/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe
   
 - WINEARCH=win32 is _not_ supported
 
