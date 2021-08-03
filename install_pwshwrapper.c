@@ -1,4 +1,4 @@
-/* installer - this installs chocolatey for wine/only run on new prefix!
+/* installer - this installs pwshwrapper for wine/only run on new prefix!
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -15,7 +15,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  *
  * Compile: *
- * x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o chocinstaller.exe
+ * x86_64-w64-mingw32-gcc -municode  -mconsole install_pwshwrapper.c -lurlmon -luser32 -lntdll -s -o install_pwshwrapper.exe
  */
 #define WIN32_LEAN_AND_MEAN
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -52,6 +52,6 @@ int __cdecl wmain(int argc, WCHAR *argv[])
     return 0;
 
 failed:
-    fprintf(stderr, "Something went wrong :( (32-bit?, winversion < win7?, failing download?....  \n");
+    fprintf(stderr, "Something went wrong :( (32-bit?, failing download?....  \n");
     return 0; /* fake success anyway */
 }
