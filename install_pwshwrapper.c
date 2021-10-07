@@ -41,10 +41,10 @@ int __cdecl wmain(int argc, WCHAR *argv[])
 
     DeleteFileW(dest64W); DeleteFileW(dest32W);
 
-    if( URLDownloadToFileW(NULL, L" https://github.com/PietJankbal/powershell-wrapper/raw/master/powershell64.exe", dest64W, 0, NULL) != S_OK )
+    if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/powershell64.exe", dest64W, 0, NULL) != S_OK )
         goto failed;
    
-    if( URLDownloadToFileW(NULL, L"https://github.com/PietJankbal/powershell-wrapper/raw/master/powershell32.exe", dest32W, 0, NULL) != S_OK )
+    if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/powershell32.exe", dest32W, 0, NULL) != S_OK )
         goto failed;
 
     fwprintf(stderr, L"\033[1;93m"); fwprintf(stderr, L"\nFiles successfully installed; Do 'wine powershell' to complete the installation \n"); fwprintf(stderr, L"\033[0m\n");
