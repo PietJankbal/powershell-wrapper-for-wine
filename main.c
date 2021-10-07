@@ -75,7 +75,7 @@ int __cdecl wmain( int argc, WCHAR *argv[] )
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread ); 
       
         fwprintf(stderr, L"\033[1;93m"); fwprintf(stderr, L"\nDownloading %ls \n", L"profile.ps1"); fwprintf(stderr, L"\033[0m\n");
-        if( URLDownloadToFileW(NULL, L"https://github.com/PietJankbal/powershell-wrapper/raw/master/powershell64.exe", lstrcatW( lstrcatW(profile_pathW, L"\\Powershell\\7\\"), L"profile.ps1"), 0, NULL) != S_OK )
+        if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", lstrcatW( lstrcatW(profile_pathW, L"\\Powershell\\7\\"), L"profile.ps1"), 0, NULL) != S_OK )
             goto failed;
     } /* End download and install */
 
