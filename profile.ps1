@@ -5,4 +5,7 @@ $path = $env:PSModulePath -split ';'
 $env:PSModulePath  = ( $path | Select-Object -Skip 1 | Sort-Object -Unique) -join ';'
 
 #Register-WMIEvent not available in PS Core, so just change into noop
-Set-Alias Register-WMIEvent Write-Host
+function Register-WMIEvent
+{
+    exit 0
+}
