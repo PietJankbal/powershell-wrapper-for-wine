@@ -10,6 +10,8 @@ function Register-WMIEvent
     exit 0
 }
 
+#Prerequisite: Stuff below requires native dotnet (winetricks -q dotnet48) to be installed, otherwise it will just fail!
+#
 #Based on Get-WmiCustom by Daniele Muscetta, so credits to aforementioned author;
 #See https://www.powershellgallery.com/packages/Traverse/0.6/Content/Private%5CGet-WMICustom.ps1
 #
@@ -38,3 +40,11 @@ Function Get-WmiObject([parameter(mandatory)] [string]$class, [string[]]$propert
     return $searcher.get()
 }
 
+
+#Note: Following obviously overrides wine (-staging)`s tasklist(.exe) so just remove stuff below if you don`t want that 
+New-Alias tasklist.exe tasklist
+
+function tasklist
+{
+     Get-WmiObject win32_process "processid,name" | Format-Table -Property Name, processid -autosize
+}
