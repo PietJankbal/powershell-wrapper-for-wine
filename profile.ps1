@@ -26,7 +26,8 @@ Function Get-WmiObject([parameter(mandatory)] [string]$class, [string[]]$propert
                        [string]$filter<#not used yet, but otherwise chocolatey starts complaining#>)
 {
     if (!(Test-Path  "HKLM:\Software\Microsoft\.NETFramework\v4.0.30319"))
-    { [System.Windows.MessageBox]::Show('This function requires native .NET48 to be installed!    Do "winetricks -q dotnet48" and try again ','Warning','ok','exclamation'); return}
+    {  Add-Type -AssemblyName PresentationCore,PresentationFramework; [System.Windows.MessageBox]::Show('This function requires native .NET48 to be installed!   Do "winetricks -q dotnet48" and try again ','Warning','ok','exclamation'); return}
+
     $ConnectionOptions = new-object System.Management.ConnectionOptions
     $assembledpath = "\\" + $computername + "\" + $namespace
     
