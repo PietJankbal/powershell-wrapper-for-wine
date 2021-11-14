@@ -1,7 +1,7 @@
 #Put workarounds/hacks here.../Adjust to your own needs. It goes into c:\\Program Files\\Powershell\\7\\profile.ps1
 
 #Remove ~/Documents/Powershell/Modules from modulepath; it becomes a mess because it`s not removed when one deletes the wineprefix... 
-$path = $env:PSModulePath -split '; $env:PSModulePath  = ( $path | Select-Object -Skip 1 | Sort-Object -Unique) -join ';'
+$path = $env:PSModulePath -split ; $env:PSModulePath  = ( $path | Select-Object -Skip 1 | Sort-Object -Unique) -join ;
 
 #Register-WMIEvent not available in PS Core, so for now just change into noop
 function Register-WMIEvent
