@@ -1,4 +1,4 @@
-# powershell-wrapper for wine
+e# powershell-wrapper for wine
 
 Wrapper for powershell.exe from wine, that gets Waves Central in wine a bit going.
 Uses pwsh.exe from Powershell Core to get at least some functionality for powershell.exe from wine.
@@ -18,7 +18,7 @@ Uses pwsh.exe from Powershell Core to get at least some functionality for powers
 # Notes about Waves Central:
 - Use most recent Wine-Staging (not vanilla-wine) to avoid several issues.
 
-- After install the 1st run will still fail with message that powershell failed; cd into the directory where the program is and try again. That message should be gone then.
+- After install the 1st run will still fail with message that powershell failed; cd into the directory where the Waves Central program is and try again. That message should be gone then.
 
 - To avoid black window: run with Wine-staging >= 6.3; this bug should be fixed in the most recent wine-(staging) versions 
 
