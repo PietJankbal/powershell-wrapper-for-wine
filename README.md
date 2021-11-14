@@ -1,4 +1,4 @@
-powershell-wrapper for wine
+# powershell-wrapper for wine
 
 Wrapper for powershell.exe from wine, that gets Waves Central in wine a bit going.
 Uses pwsh.exe from Powershell Core to get at least some functionality for powershell.exe from wine.
