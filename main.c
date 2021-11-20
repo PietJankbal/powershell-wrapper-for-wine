@@ -123,7 +123,7 @@ int __cdecl wmain( int argc, WCHAR *argv[] )
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );
         return 0;
     }
-    /* Execute the command through pwsh.exe */
+    /* Otherwise execute the command through pwsh.exe */
     CreateProcessW( pwsh_pathW, cmdlineW , 0, 0, 0, 0, 0, 0, &si, &pi );
     WaitForSingleObject( pi.hProcess, INFINITE ); GetExitCodeProcess( pi.hProcess, &exitcode ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );    
 
