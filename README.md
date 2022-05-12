@@ -3,7 +3,7 @@
 Wrapper for powershell.exe from wine, that gets Waves Central in wine a bit going.
 Uses pwsh.exe from Powershell Core to get at least some functionality for powershell.exe from wine.
 
-Note: This is minimal powershell for Waves Central; If you look for more feature-rich powershell in wine see https://github.com/PietJankbal/Chocolatey-for-wine
+Note: This is minimal powershell for Waves Central; If you are looking for more feature-rich powershell in wine see https://github.com/PietJankbal/Chocolatey-for-wine
 
 # Install 
 
