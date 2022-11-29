@@ -7,14 +7,18 @@ Note: This is minimal powershell for Waves Central; If you are looking for more 
 
 # Install 
 
+```
  wget https://github.com/PietJankbal/powershell-wrapper-for-wine/raw/master/install_pwshwrapper.exe
- 
+```
+
  Then do:
- 
+
+```
  wine install_pwshwrapper.exe
+```
 
 # Notes:
-- Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. "wine powershell")
+- Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. wine powershell`)
   (ConEmu is installed to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780)
 
 # Notes about Waves Central:
@@ -32,15 +36,20 @@ permissions issue". Run with Wine-staging >= 6.4; this bug should be fixed in up
 # Some additional remarks:
 - If you want to compile yourself instead of downloading binaries:
 
-  i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell32.exe
+  Build powershell:
 
-  x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell64.exe
-  
+```
+i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell32.exe
+
+x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell64.exe
+```
   Then do (Assuming ~/.wine is where your wineprefix is)
   
-  cp -rf ./powershell64.exe ~/.wine/drive_c/windows/system32/WindowsPowerShell/v1.0/powershell.exe
+```
+cp -rf ./powershell64.exe ~/.wine/drive_c/windows/system32/WindowsPowerShell/v1.0/powershell.exe
   
-  cp -rf ./powershell32.exe ~/.wine/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe
+cp -rf ./powershell32.exe ~/.wine/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe
+```
   
 - WINEARCH=win32 is _not_ supported
 
