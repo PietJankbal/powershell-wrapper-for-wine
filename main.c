@@ -123,6 +123,58 @@ int __cdecl wmain( int argc, WCHAR *argv[] )
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );
         return 0;
     }
+    /* replace incompatible commands/strings in the cmdline fed to pwsh.exe; see profile.ps1 howto replace */
+    if ( GetEnvironmentVariableW( L"PSHACKS", bufW, MAX_PATH + 1 ) ) {
+    /* Following function taken from https://creativeandcritical.net/downloads/replacebench.c which is in public domain; Credits to the there mentioned authors*/
+    /* replaces in the string "str" all the occurrences of the string "sub" with the string "rep" */
+    wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *rep)
+    {
+        size_t slen = lstrlenW(sub); size_t rlen = lstrlenW(rep);
+        size_t size = lstrlenW(str) + 1;
+        size_t diff = rlen - slen;
+        size_t capacity = (diff>0 && slen) ? 2 * size : size;
+        wchar_t *buf = (wchar_t *)HeapAlloc(GetProcessHeap(),8,sizeof(wchar_t)*capacity);
+        wchar_t *find, *b = buf;
+
+        if (b == NULL) return NULL;
+        if (slen == 0) return memcpy(b, str, sizeof(wchar_t)*size);
+
+        while((find = /*strstrW*/(wchar_t *)wcsstr((const wchar_t *)str, (const wchar_t *)sub))) {
+            if ((size += diff) > capacity) {
+            wchar_t *ptr = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, capacity = 2 * size*sizeof(wchar_t));
+            if (ptr == NULL) {HeapFree(GetProcessHeap(), 0, buf); return NULL;}
+            b = ptr + (b - buf);
+            buf = ptr;
+        }
+        memcpy(b, str, (find - str) * sizeof(wchar_t)); /* copy up to occurrence */
+        b += find - str;
+        memcpy(b, rep, rlen * sizeof(wchar_t));       /* add replacement */
+        b += rlen;
+        str = find + slen;
+        }
+        memcpy(b, str, (size - (b - buf)) * sizeof(wchar_t));
+        b = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, size * sizeof(wchar_t));         /* trim to size */
+        return b ? b : buf;
+    }
+
+    WCHAR buf_fromW[MAX_PATH];WCHAR buf_toW[MAX_PATH]; WCHAR *buf_replacedW=NULL;
+
+    if (GetEnvironmentVariableW( L"PS_FROM", buf_fromW, MAX_PATH + 1 ) && GetEnvironmentVariableW( L"PS_TO", buf_toW, MAX_PATH + 1 )) {
+        wchar_t *bufferA, *bufferB = 0;
+
+        wchar_t* tokenA = wcstok_s(buf_fromW, L"¶", &bufferA); /* Use ¶ as separator, it will likely never show up in a command */
+        wchar_t* tokenB = wcstok_s(buf_toW, L"¶", &bufferB);
+
+        while (tokenA && tokenB) {
+            buf_replacedW = replace_smart(cmdlineW, tokenA, tokenB);
+            lstrcpyW( cmdlineW, buf_replacedW ); HeapFree(GetProcessHeap(), 0, buf_replacedW);
+
+            tokenA = wcstok_s(NULL, L"¶", &bufferA);
+            tokenB = wcstok_s(NULL, L"¶", &bufferB);
+        }
+    }
+    }
+
     /* Otherwise execute the command through pwsh.exe */
     CreateProcessW( pwsh_pathW, cmdlineW , 0, 0, 0, 0, 0, 0, &si, &pi );
     WaitForSingleObject( pi.hProcess, INFINITE ); GetExitCodeProcess( pi.hProcess, &exitcode ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );    
