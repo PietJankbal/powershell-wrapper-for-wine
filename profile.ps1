@@ -3,11 +3,11 @@
 #Remove ~/Documents/Powershell/Modules from modulepath; it becomes a mess because it`s not removed when one deletes the wineprefix... 
 $path = $env:PSModulePath -split ';' ; $env:PSModulePath  = ( $path | Select-Object -Skip 1 | Sort-Object -Unique) -join ';'
 
-#Register-WMIEvent not available in PS Core, so for now just change into noop
-function Register-WMIEvent
-{
-    exit 0
-}
+$env:PSHACKS=1 # To enable replacing strings in the cmdline fed to pwsh.exe
+#failing command: powershell.exe -noLogo -command 'ls -r \"C:\windows" | measure -s Length | Select -ExpandProperty Sum'
+#powershell core needs 'measure -sum' instead of 'measure -s' so we need to replace it; also remove Register-WMIEvent 
+$env:PS_FROM = " measure -s ¶ -noExit Register-WMIEvent " # Use ¶ as separator, it will likely never show up in a command 
+$env:PS_TO =   " measure -sum ¶ Write-Host FIXME stub!! "
 
 #Prerequisite: Stuff below requires native dotnet (winetricks -q dotnet48) to be installed, otherwise it will just fail!
 #
