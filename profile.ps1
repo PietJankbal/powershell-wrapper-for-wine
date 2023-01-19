@@ -9,6 +9,12 @@ $env:PSHACKS=1 # To enable replacing strings in the cmdline fed to pwsh.exe
 $env:PS_FROM = " measure -s ¶ -noExit Register-WMIEvent " # Use ¶ as separator, it will likely never show up in a command 
 $env:PS_TO =   " measure -sum ¶ Write-Host FIXME stub!! "
 
+#Register-WMIEvent not available in PS Core, so for now just change into noop
+function Register-WMIEvent
+{
+    exit 0
+}
+
 #Prerequisite: Stuff below requires native dotnet (winetricks -q dotnet48) to be installed, otherwise it will just fail!
 #
 #Based on Get-WmiCustom by Daniele Muscetta, so credits to aforementioned author;
