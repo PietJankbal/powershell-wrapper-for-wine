@@ -3,11 +3,13 @@
 #Remove ~/Documents/Powershell/Modules from modulepath; it becomes a mess because it`s not removed when one deletes the wineprefix... 
 $path = $env:PSModulePath -split ';' ; $env:PSModulePath  = ( $path | Select-Object -Skip 1 | Sort-Object -Unique) -join ';'
 
-$env:PSHACKS=1 # To enable replacing strings in the cmdline fed to pwsh.exe
+#run powershell once to set env vars below;
+[System.Environment]::SetEnvironmentVariable('PSHACKS','1','User') # To enable replacing strings in the cmdline fed to pwsh.exe
 #failing command: powershell.exe -noLogo -command 'ls -r \"C:\windows" | measure -s Length | Select -ExpandProperty Sum'
 #powershell core needs 'measure -sum' instead of 'measure -s' so we need to replace it; also remove Register-WMIEvent 
-$env:PS_FROM = " measure -s ¶ -noExit Register-WMIEvent " # Use ¶ as separator, it will likely never show up in a command 
-$env:PS_TO =   " measure -sum ¶ Write-Host FIXME stub!! "
+
+[System.Environment]::SetEnvironmentVariable('PS_FROM',' measure -s ¶ -noExit Register-WMIEvent ','User')
+[System.Environment]::SetEnvironmentVariable('PS_TO',' measure -sum ¶ Write-Host FIXME stub!! ','User')
 
 #Register-WMIEvent not available in PS Core, so for now just change into noop
 function Register-WMIEvent
@@ -50,26 +52,4 @@ Function Get-WmiObject([parameter(mandatory)] [string]$class, [string[]]$propert
 
 Set-Alias Get-CIMInstance Get-WMIObject
 
-#Example (works on windows,requires admin rights): Set-WmiInstance -class win32_operatingsystem -arguments @{"description" = "MyDescription"}
-#Based on https://devblogs.microsoft.com/scripting/use-the-set-wmiinstance-powershell-cmdlet-to-ease-configuration/
-Function Set-WmiInstance( [string]$class, [hashtable]$arguments, [string]$computername = "localhost", `
-                          [string]$namespace = "root\cimv2" <#, [string]$path #>)
-{
-    $assembledpath = "\\" + $computername + "\" + $namespace + ":" + $class
-    $obj = ([wmiclass]"$assembledpath").CreateInstance()
 
-    foreach ($h in $arguments.GetEnumerator()) {
-        $obj.$($h.Name) = $($h.Value)
-    }
-    $result = $obj.put()
-
-    return $result.Path
-}
-
-#Note: Following obviously overrides wine (-staging)`s tasklist(.exe) so just remove stuff below if you don`t want that 
-New-Alias tasklist.exe tasklist
-
-function tasklist
-{
-     Get-WmiObject win32_process "processid,name" | Format-Table -Property Name, processid -autosize
-}
