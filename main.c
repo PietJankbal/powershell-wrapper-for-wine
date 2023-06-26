@@ -21,7 +21,6 @@
  * powershell.exe (Get-PSDrive C).Free
  * powershell.exe -noLogo -noExit  -c Register-WMIEvent -Query 'SELECT * FROM Win32_DeviceChangeEvent WHERE (EventType = 2 OR EventType = 3) GROUP WITHIN 4'
  *                -Action { [System.Console]::WriteLine('Devices Changed') }
- *
  * Compile:
  * i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -s -o powershell32.exe
  * x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -s -o powershell64.exe
@@ -48,9 +47,6 @@ int __cdecl wmain( int argc, WCHAR *argv[] )
     {
         WCHAR tmpW[MAX_PATH], profile_pathW[MAX_PATH], msiexecW[MAX_PATH];
     
-        MessageBoxA(NULL, "Looks like Powershell Core is not installed \nWill start downloading and install now\n \
-        This will take quite some time!!!\nNo progress bar is shown!", "Message", MB_ICONWARNING | MB_OK);
-        
         if( !ExpandEnvironmentStringsW( L"%ProgramW6432%", profile_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
         if( !ExpandEnvironmentStringsW( L"%winsysdir%", msiexecW, MAX_PATH + 1 ) ) goto failed; 
 
