@@ -20,7 +20,13 @@ Note: This is minimal powershell for Waves Central; If you are looking for more 
 # Notes:
 - Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. wine powershell`)
   (ConEmu is installed to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780)
+- For an unattended install you could do (thanks brunais fot the tip):
 
+```
+wget https://github.com/PietJankbal/powershell-wrapper-for-wine/raw/master/install_pwshwrapper.exe
+wine install_pwshwrapper.exe
+wine powershell -noni -c 'echo "done"'
+```
 # Notes about Waves Central:
 - Use most recent Wine-Staging (not vanilla-wine) to avoid several issues.
 
