@@ -3,13 +3,16 @@
 #Remove ~/Documents/Powershell/Modules from modulepath; it becomes a mess because it`s not removed when one deletes the wineprefix... 
 $path = $env:PSModulePath -split ';' ; $env:PSModulePath  = ( $path | Select-Object -Skip 1 | Sort-Object -Unique) -join ';'
 
-#run powershell once to set env vars below;
-[System.Environment]::SetEnvironmentVariable('PSHACKS','1','User') # To enable replacing strings in the cmdline fed to pwsh.exe
-#failing command: powershell.exe -noLogo -command 'ls -r \"C:\windows" | measure -s Length | Select -ExpandProperty Sum'
-#powershell core needs 'measure -sum' instead of 'measure -s' so we need to replace it; also remove Register-WMIEvent 
-
+#Dry-run 'powershell.exe' once to set env vars below (after you changed them); They are written to HKCU:Environment
+#To enable/disable replacing strings in the cmdline fed to pwsh.exe set/unset this env var:
+[System.Environment]::SetEnvironmentVariable('PSHACKS','1','User') 
+#Set strings to replace in the cmdline fed to pwsh by setting following two env vars. Use ¶ as seperator for the strings.
+#Failing command: powershell.exe -noLogo -command 'ls -r "C:\windows" | measure -s Length | Select -ExpandProperty Sum'
+#Powershell Core needs 'measure -sum' instead of 'measure -s' so we replace it
+#Also replace for another failing command: the incompatible ' -noExit Register-WMIEvent ' with harmless ' Write-Host FIXME stub!! ' 
 [System.Environment]::SetEnvironmentVariable('PS_FROM',' measure -s ¶ -noExit Register-WMIEvent ','User')
 [System.Environment]::SetEnvironmentVariable('PS_TO',' measure -sum ¶ Write-Host FIXME stub!! ','User')
+#End hacks
 
 #Register-WMIEvent not available in PS Core, so for now just change into noop
 function Register-WMIEvent
