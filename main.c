@@ -57,7 +57,7 @@ int mainCRTStartup(void)
         if( !ExpandEnvironmentStringsW( L"%winsysdir%\\msiexec.exe", msiexecW, MAX_PATH + 1 ) ) goto failed;
         
         GetTempPathW( MAX_PATH, tmpW );
-        fputs( "\033[1;93m", stdout); fputs("Downloading  PowerShell-7.4.1-win-x64.msi",stdout); fputs("\033[0m\n", stdout );
+        fputs("\033[1;93mDownloading Powershell Core\033[0m",stderr);
         if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/PowerShell-7.4.1-win-x64.msi", lstrcatW( tmpW, L"PowerShell-7.4.1-win-x64.msi"), 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
    
@@ -67,7 +67,7 @@ int mainCRTStartup(void)
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );   
             
         GetTempPathW( MAX_PATH,tmpW );
-        //fputs( "\033[1;93mDownloading  Conemu\033[0m\n", stdout );
+        fputs("\033[1;93mDownloading ConEmu\033[0m",stderr);
         if( URLDownloadToFileW( NULL, L"https://github.com/Maximus5/ConEmu/releases/download/v23.07.24/ConEmuPack.230724.7z", lstrcatW( tmpW, L"ConEmuPack.230724.7z" ), 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }         
 
