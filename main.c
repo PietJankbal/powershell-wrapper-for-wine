@@ -1,5 +1,4 @@
-/* Installs PowerShell Core, wraps powershell`s commandline into correct syntax for pwsh.exe, 
- * and some code that allows calls to an exe (like wusa.exe) to be replaced by a function in profile.ps1 
+/* Installs PowerShell Core, wraps powershell`s commandline into correct syntax for pwsh.exe.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,7 +19,6 @@
  -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding  main.c -lurlmon -lkernel32 -lucrtbase -luser32 -nostdlib -lshell32 -lntdll -s -o powershell64.exe
  * i686-w64-mingw32-gcc -O1 -fno-ident -fno-stack-protector -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -fwhole-program\
  -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding main.c -lurlmon -lkernel32 -lucrtbase -luser32 -nostdlib -lshell32 -lntdll -s -o powershell32.exe
- * Btw: The included binaries are compressed with upx to make them even smaller (choco install upx):
  */
  
 #include <windows.h>
