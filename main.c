@@ -53,32 +53,42 @@ int mainCRTStartup(void)
     {    
         WCHAR tmpW[MAX_PATH], profile_pathW[MAX_PATH], msiexecW[MAX_PATH];
     
-        if( !ExpandEnvironmentStringsW( L"%ProgramFiles%", profile_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
-        if( !ExpandEnvironmentStringsW( L"%winsysdir%", msiexecW, MAX_PATH + 1 ) ) goto failed; 
-
+        if( !ExpandEnvironmentStringsW( L"%ProgramW6432%\\Powershell\\7\\profile.ps1", profile_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
+        if( !ExpandEnvironmentStringsW( L"%winsysdir%\\msiexec.exe", msiexecW, MAX_PATH + 1 ) ) goto failed;
+        
         GetTempPathW( MAX_PATH, tmpW );
-        //fputs( "\033[1;93m", stdout); fputs("Downloading  PowerShell-7.0.3-win-x64.msi",stdout); fputs("\033[0m\n", stdout );
-        if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.0.3/PowerShell-7.0.3-win-x64.msi", lstrcatW( tmpW, L"PowerShell-7.0.3-win-x64.msi"), 0, NULL ) != S_OK )
+        fputs( "\033[1;93m", stdout); fputs("Downloading  PowerShell-7.4.1-win-x64.msi",stdout); fputs("\033[0m\n", stdout );
+        if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/PowerShell-7.4.1-win-x64.msi", lstrcatW( tmpW, L"PowerShell-7.4.1-win-x64.msi"), 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
    
         memset( &si, 0, sizeof( STARTUPINFO )); si.cb = sizeof( STARTUPINFO ); memset( &pi, 0, sizeof( PROCESS_INFORMATION ));
         GetTempPathW( MAX_PATH, tmpW );
-        CreateProcessW(lstrcatW( msiexecW, L"\\msiexec.exe" ), lstrcatW(  lstrcatW( bufW, lstrcatW( tmpW, L"PowerShell-7.0.3-win-x64.msi") ), L" /q") , 0, 0, 0, 0, 0, 0, &si, &pi);
+        CreateProcessW( msiexecW, lstrcatW( lstrcatW( lstrcatW( bufW, tmpW ), L"PowerShell-7.4.1-win-x64.msi"), L" ENABLE_PSREMOTING=1 REGISTER_MANIFEST=1  /q") , 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );   
+            
+        GetTempPathW( MAX_PATH,tmpW );
+        //fputs( "\033[1;93mDownloading  Conemu\033[0m\n", stdout );
+        if( URLDownloadToFileW( NULL, L"https://github.com/Maximus5/ConEmu/releases/download/v23.07.24/ConEmuPack.230724.7z", lstrcatW( tmpW, L"ConEmuPack.230724.7z" ), 0, NULL ) != S_OK )
+            { fputs("download failed",stderr ); exit(1); }         
 
         GetTempPathW( MAX_PATH,tmpW );
         //fputs( "\033[1;93mDownloading  Conemu\033[0m\n", stdout );
-        if( URLDownloadToFileW( NULL, L"https://conemu.github.io/install2.ps1", lstrcatW( tmpW, L"install2.ps1" ), 0, NULL ) != S_OK )
+        if( URLDownloadToFileW( NULL, L"https://www.7-zip.org/a/7zr.exe", lstrcatW( tmpW, L"7zr.exe" ), 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
 
+        if( !ExpandEnvironmentStringsW( L"%SystemDrive%\\ConEmu", bufW, MAX_PATH + 1 ) ) goto failed; 
+        if( !ExpandEnvironmentStringsW( L"%TMP%\\ConEmuPack.230724.7z", msiexecW, MAX_PATH + 1 ) ) goto failed; 
+
         memset( &si, 0, sizeof( STARTUPINFO ) ); si.cb = sizeof( STARTUPINFO ); memset( &pi , 0, sizeof( PROCESS_INFORMATION ) );
-        GetTempPathW( MAX_PATH, tmpW ); bufW[0] = 0;
-        CreateProcessW( pwsh_pathW, lstrcatW( lstrcatW( lstrcatW( bufW, L" -file " ), tmpW ), L"\\install2.ps1" ), 0, 0, 0, 0, 0, 0, &si, &pi);
+        /*GetTempPathW( MAX_PATH, tmpW ); bufW[0] = 0;*/
+        CreateProcessW( NULL, lstrcatW( lstrcatW( lstrcatW( lstrcatW( lstrcatW(tmpW, L" x "), msiexecW ), L" -o\"" ), bufW) , L"\"" ), 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread ); 
       
-        fputs( "\033[1;93mDownloading  PowerShell-7.0.3-win-x64.msi\033[0m\n", stdout );
-        if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", lstrcatW( lstrcatW(profile_pathW, L"\\Powershell\\7\\"), L"profile.ps1"), 0, NULL) != S_OK )
+        //fputs( "\033[1;93mDownloading  PowerShell-7.4.1-win-x64.msi\033[0m\n", stdout );
+        if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", profile_pathW, 0, NULL) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
+        ps_console = TRUE;
+        goto exec;
     } 
     /* Main program: wrap the original powershell-commandline into correct syntax, and send it to pwsh.exe */ 
     /* pwsh requires a command option "-c" , powershell doesn`t, so we have to insert it somewhere e.g. 'powershell -nologo 2+1' should go into 'powershell -nologo -c 2+1'*/ 
