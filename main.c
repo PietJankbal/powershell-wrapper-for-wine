@@ -1,5 +1,5 @@
-/*
- * powershell.exe - this program only calls pwsh.exe
+/* Installs PowerShell Core, wraps powershell`s commandline into correct syntax for pwsh.exe, 
+ * and some code that allows calls to an exe (like wusa.exe) to be replaced by a function in profile.ps1 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -15,110 +15,99 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  *
- * Commands that Waves Central calls, the last one fails but not fatal for Waves Central
- * powershell.exe Write-Host $PSVersionTable.PSVersion.Major $PSVersionTable.PSVersion.Minor
- * powershell.exe -command &{'{0}.{1}' -f $PSVersionTable.PSVersion.Major, $PSVersionTable.PSVersion.Minor}
- * powershell.exe (Get-PSDrive C).Free
- * powershell.exe -noLogo -noExit  -c Register-WMIEvent -Query 'SELECT * FROM Win32_DeviceChangeEvent WHERE (EventType = 2 OR EventType = 3) GROUP WITHIN 4'
- *                -Action { [System.Console]::WriteLine('Devices Changed') }
- * Compile:
- * i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -s -o powershell32.exe
- * x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -s -o powershell64.exe
+ * Compile: // For fun I changed code from standard main(argc,*argv[]) to something like https://nullprogram.com/blog/2016/01/31/)
+ * x86_64-w64-mingw32-gcc -O1 -fno-ident -fno-stack-protector -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -fwhole-program\
+ -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding  main.c -lurlmon -lkernel32 -lucrtbase -luser32 -nostdlib -lshell32 -lntdll -s -o powershell64.exe
+ * i686-w64-mingw32-gcc -O1 -fno-ident -fno-stack-protector -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -fwhole-program\
+ -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding main.c -lurlmon -lkernel32 -lucrtbase -luser32 -nostdlib -lshell32 -lntdll -s -o powershell32.exe
+ * Btw: The included binaries are compressed with upx to make them even smaller (choco install upx):
  */
+ 
 #include <windows.h>
+#include <winternl.h> 
 #include <stdio.h>
 
-int __cdecl wmain( int argc, WCHAR *argv[] )
+static inline BOOL is_single_or_last_option (WCHAR *opt)
 {
-    BOOL no_psconsole = TRUE, noexit = FALSE;
-    WCHAR conemu_pathW[MAX_PATH], cmdlineW[MAX_PATH]=L"", pwsh_pathW[MAX_PATH], bufW[MAX_PATH] = L" /i ";
+    return ( ( ( !_wcsnicmp( opt, L"-c", 2 ) && _wcsnicmp( opt, L"-config", 7 ) ) || !_wcsnicmp( opt, L"-n", 2 ) || !_wcsnicmp( opt, L"-enc", 4 ) ||\
+                 !_wcsnicmp( opt, L"-m", 2 ) || !_wcsnicmp( opt, L"-s", 2 )  || !wcscmp( opt, L"-" ) || !_wcsnicmp( opt, L"-f", 2 ) ) ? TRUE : FALSE );
+}
+
+__attribute__((externally_visible))  /* for -fwhole-program */
+int mainCRTStartup(void)
+{
+    BOOL read_from_stdin = FALSE, ps_console = FALSE;
+    wchar_t conemu_pathW[MAX_PATH]=L"", cmdlineW[4096]=L"", pwsh_pathW[MAX_PATH] =L"", bufW[MAX_PATH] = L" /i ", drive[MAX_PATH] , dir[_MAX_FNAME], filenameW[_MAX_FNAME], **argv;;
     DWORD exitcode;       
-    STARTUPINFOW si;
-    PROCESS_INFORMATION pi;
-    int i = 1, j = 1;
-
-    if( !ExpandEnvironmentStringsW( L"%ProgramW6432%", pwsh_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
-    if( !ExpandEnvironmentStringsW( L"%SystemDrive%", conemu_pathW, MAX_PATH + 1 ) ) goto failed; 
-
-    lstrcatW( conemu_pathW, L"\\ConEmu\\ConEmu.exe" );
-    lstrcatW( pwsh_pathW, L"\\Powershell\\7\\pwsh.exe" );
+    STARTUPINFOW si = {0};
+    PROCESS_INFORMATION pi = {0};
+    int i = 1, j = 1, argc;
     
+    argv = CommandLineToArgvW ( GetCommandLineW(), &argc);
+    _wsplitpath( argv[0], drive, dir, filenameW, NULL );
+
+    ExpandEnvironmentStringsW(L"%ProgramW6432%\\Powershell\\7\\pwsh.exe", pwsh_pathW, MAX_PATH+1);
+    ExpandEnvironmentStringsW(L"%SystemDrive%\\ConEmu\\ConEmu64.exe", conemu_pathW, MAX_PATH+1);
+    /* Download and Install */
     if ( GetFileAttributesW( pwsh_pathW ) == INVALID_FILE_ATTRIBUTES ) /* Download and install*/
-    {
+    {    
         WCHAR tmpW[MAX_PATH], profile_pathW[MAX_PATH], msiexecW[MAX_PATH];
     
-        if( !ExpandEnvironmentStringsW( L"%ProgramW6432%", profile_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
+        if( !ExpandEnvironmentStringsW( L"%ProgramFiles%", profile_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
         if( !ExpandEnvironmentStringsW( L"%winsysdir%", msiexecW, MAX_PATH + 1 ) ) goto failed; 
 
         GetTempPathW( MAX_PATH, tmpW );
-        fwprintf( stderr, L"\033[1;93m" ); fwprintf( stderr, L"\nDownloading %ls \n", L"PowerShell-7.0.3-win-x64.msi" ); fwprintf( stderr, L"\033[0m\n" );
+        //fputs( "\033[1;93m", stdout); fputs("Downloading  PowerShell-7.0.3-win-x64.msi",stdout); fputs("\033[0m\n", stdout );
         if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.0.3/PowerShell-7.0.3-win-x64.msi", lstrcatW( tmpW, L"PowerShell-7.0.3-win-x64.msi"), 0, NULL ) != S_OK )
-            goto failed;
+            { fputs("download failed",stderr ); exit(1); }
    
-        GetTempPathW( MAX_PATH,tmpW );
-        fwprintf( stderr, L"\033[1;93m" ); fwprintf( stderr, L"\nDownloading %ls \n", L"install2.ps1" ); fwprintf( stderr, L"\033[0m\n" );
-        if( URLDownloadToFileW( NULL, L"https://conemu.github.io/install2.ps1", lstrcatW( tmpW, L"install2.ps1" ), 0, NULL ) != S_OK )
-            goto failed;
-
         memset( &si, 0, sizeof( STARTUPINFO )); si.cb = sizeof( STARTUPINFO ); memset( &pi, 0, sizeof( PROCESS_INFORMATION ));
         GetTempPathW( MAX_PATH, tmpW );
         CreateProcessW(lstrcatW( msiexecW, L"\\msiexec.exe" ), lstrcatW(  lstrcatW( bufW, lstrcatW( tmpW, L"PowerShell-7.0.3-win-x64.msi") ), L" /q") , 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );   
+
+        GetTempPathW( MAX_PATH,tmpW );
+        //fputs( "\033[1;93mDownloading  Conemu\033[0m\n", stdout );
+        if( URLDownloadToFileW( NULL, L"https://conemu.github.io/install2.ps1", lstrcatW( tmpW, L"install2.ps1" ), 0, NULL ) != S_OK )
+            { fputs("download failed",stderr ); exit(1); }
 
         memset( &si, 0, sizeof( STARTUPINFO ) ); si.cb = sizeof( STARTUPINFO ); memset( &pi , 0, sizeof( PROCESS_INFORMATION ) );
         GetTempPathW( MAX_PATH, tmpW ); bufW[0] = 0;
         CreateProcessW( pwsh_pathW, lstrcatW( lstrcatW( lstrcatW( bufW, L" -file " ), tmpW ), L"\\install2.ps1" ), 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread ); 
       
-        fwprintf(stderr, L"\033[1;93m"); fwprintf(stderr, L"\nDownloading %ls \n", L"profile.ps1"); fwprintf(stderr, L"\033[0m\n");
+        fputs( "\033[1;93mDownloading  PowerShell-7.0.3-win-x64.msi\033[0m\n", stdout );
         if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", lstrcatW( lstrcatW(profile_pathW, L"\\Powershell\\7\\"), L"profile.ps1"), 0, NULL) != S_OK )
-            goto failed;
-    } /* End download and install */
-
-    BOOL is_single_or_last_option (WCHAR *opt)
-    {
-        return ( ( ( !_wcsnicmp( opt, L"-c", 2 ) && _wcsnicmp( opt, L"-config", 7 ) ) || !_wcsnicmp( opt, L"-n", 2 ) || \
-                     !_wcsnicmp( opt, L"-m", 2 ) || !_wcsnicmp( opt, L"-s", 2 )  || !_wcsicmp( opt, L"-" ) || !_wcsnicmp( opt, L"-f", 2 )) ? TRUE : FALSE );
-    }
+            { fputs("download failed",stderr ); exit(1); }
+    } 
+    /* Main program: wrap the original powershell-commandline into correct syntax, and send it to pwsh.exe */ 
     /* pwsh requires a command option "-c" , powershell doesn`t, so we have to insert it somewhere e.g. 'powershell -nologo 2+1' should go into 'powershell -nologo -c 2+1'*/ 
-    while ( !_wcsnicmp(L"-", argv[i], 1 ) ) /* Search for 1st argument after options */
-    {
-        if ( !is_single_or_last_option ( argv[i] ) ) i++;
-        i++;
-    }
-
-    if( i == argc) no_psconsole = FALSE;  /*no command found, start PSConsole later in ConEmu to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780*/
-
-    while (j < i ) /* concatenate options into new cmdline, meanwhile working around some incompabilities */ 
-    {   
-        if ( !_wcsnicmp( L"-noe", argv[j], 4 ) ) noexit = TRUE;    /* -NoExit, hack to start PSConsole in ConEmu later to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780)*/
-        if ( !_wcsnicmp( L"-f", argv[j], 2 ) ) no_psconsole = TRUE;/* -File, do not start in PSConsole */
-        if ( !_wcsnicmp( L"-ve", argv[j], 3 ) ) {j++;  goto done;} /* -Version, exclude from new cmdline, incompatible... */
-        if ( !_wcsnicmp( L"-nop", argv[j], 4 ) ) goto done;        /* -NoProfile, also exclude to always enable profile.ps1 to work around possible incompatibilities */   
-        lstrcatW( lstrcatW( cmdlineW, L" " ), argv[j] );
-        done: j++;
+    for (i = 1;  argv[i] &&  !wcsncmp(  argv[i], L"-" , 1 ); i++ ) { if ( !is_single_or_last_option ( argv[i] ) ) i++; if(!argv[i]) break;} /* Search for 1st argument after options */
+    for (j = 1; j < i ; j++ ) /* concatenate options into new cmdline, meanwhile working around some incompabilities */ 
+    { 
+        if ( !wcscmp( L"-", argv[j] ) ) { if(j == (argc-1)) {read_from_stdin = TRUE; continue;} else {fputs("\033[1;35mInvalid usage\033[0m",stderr);exit(1);}}   /* hyphen handled later on */
+        if ( !_wcsnicmp(  argv[j], L"-ve", 3 ) ) {j++;  continue;}            /* -Version, exclude from new cmdline, incompatible... */
+        if ( !_wcsnicmp( argv[j], L"-nop", 4 ) ) continue;                    /* -NoProfile, also exclude to always enable profile.ps1 to work around possible incompatibilities */   
+        wcscat( wcscat( cmdlineW, L" " ), argv[j] );
     }
     /* now insert a '-c' (if necessary) */
-    if ( argv[i] && _wcsnicmp( argv[i-1], L"-c", 2 ) && _wcsicmp( argv[i-1], L"-" ) && _wcsnicmp( argv[i-1], L"-f", 2 ))
-        lstrcatW( lstrcatW( cmdlineW, L" " ), L"-c " );
-
-    while( i  < argc ) /* concatenate the rest of the arguments into the new cmdline */
-    {
-        lstrcatW( lstrcatW( cmdlineW, L" " ), argv[i] );
-        i++;
-    }
- 
-    if ( GetEnvironmentVariable( L"PWSHVERBOSE", bufW, MAX_PATH + 1 ) ) 
-        { fwprintf( stderr, L"\033[1;35m" ); fwprintf( stderr, L"\n command line is %ls \n", cmdlineW ); fwprintf( stderr, L"\033[0m\n" ); }
-    /* if not a command, start powershellconsole in ConEmu to work around missing ENABLE_VIRTUAL_TERMINAL_PROCESSING (bug https://bugs.winehq.org/show_bug.cgi?id=49780) */
-    memset( &si, 0, sizeof( STARTUPINFO )); si.cb = sizeof( STARTUPINFO ); memset( &pi, 0, sizeof( PROCESS_INFORMATION ) );
-    if( !no_psconsole || noexit)
-    {
-        bufW[0] = 0;
-        CreateProcessW( conemu_pathW, lstrcatW( lstrcatW( lstrcatW( bufW, L" -resetdefault -Title \"This is Powershell Core (pwsh.exe), not (!) powershell.exe\" -run "), pwsh_pathW), cmdlineW), 0, 0, 0, 0, 0, 0, &si, &pi) ;
-        WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );
-        return 0;
-    }
+    if ( argv[i] && _wcsnicmp( argv[i-1], L"-c", 2 ) && _wcsnicmp( argv[i-1], L"-enc", 4 ) && _wcsnicmp( argv[i-1], L"-f", 2 ) && _wcsnicmp( argv[i], L"/c", 2 ) )
+        wcscat( wcscat( cmdlineW, L" " ), L"-c " );
+    /* concatenate the rest of the arguments into the new cmdline */
+    for( j = i; j < argc; j++ ) wcscat( wcscat( cmdlineW, L" " ), argv[j] );
+    /* support pipeline to handle something like " '$(get-date) | powershell - ' */
+    if( read_from_stdin ) {
+        WCHAR defline[8192]; wint_t wc; char line[8192] = " \"&  {" ; /* embed cmd in scriptblock */ int m = strlen(line) - 1;
+        HANDLE input = GetStdHandle(STD_INPUT_HANDLE); DWORD type = GetFileType(input);
+        /* handle pipe */
+        if ( type == FILE_TYPE_CHAR ) goto exec; /* not redirected (FILE_TYPE_PIPE or FILE_TYPE_DISK) */
+        if( !wcscmp(argv[argc-1], L"-" ) && _wcsnicmp(argv[argc-2], L"-c", 2 ) ) wcscat(cmdlineW, L" -c ");
+        while( ( wc = fgetc(stdin) ) != WEOF ) line[++m] = wc;
+        line[++m] = '}';line[++m] = '"';line[++m] = '\0'; 
+        mbstowcs(defline, line, 8192);
+        wcscat(cmdlineW, defline);
+    } /* end support pipeline */
+    if ( i == argc && !read_from_stdin ) ps_console = TRUE;
     /* replace incompatible commands/strings in the cmdline fed to pwsh.exe; see profile.ps1 howto replace */
     if ( GetEnvironmentVariableW( L"PSHACKS", bufW, MAX_PATH + 1 ) ) {
     /* Following function taken from https://creativeandcritical.net/downloads/replacebench.c which is in public domain; Credits to the there mentioned authors*/
@@ -170,14 +159,13 @@ int __cdecl wmain( int argc, WCHAR *argv[] )
         }
     }
     }
-
-    /* Otherwise execute the command through pwsh.exe */
-    CreateProcessW( pwsh_pathW, cmdlineW , 0, 0, 0, 0, 0, 0, &si, &pi );
+      
+exec: 
+    bufW[0] = 0; /* Execute the command through pwsh.exe (or start PSconsole via ConEmu if no command found) */
+    CreateProcessW( pwsh_pathW, !ps_console ? cmdlineW : wcscat( wcscat ( wcscat( wcscat( wcscat( \
+                    bufW, L" -c " ) , conemu_pathW ) , L" -NoUpdate -LoadRegistry -run "), pwsh_pathW ), cmdlineW ), 0, 0, 0, 0, 0, 0, &si, &pi );
     WaitForSingleObject( pi.hProcess, INFINITE ); GetExitCodeProcess( pi.hProcess, &exitcode ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );    
-
-    return ( GetEnvironmentVariable( L"FAKESUCCESS", bufW, MAX_PATH + 1 ) ? 0 : exitcode ); 
-
+    LocalFree(argv);
 failed:
-    fprintf( stderr, "Something went wrong :( (32-bit?, winversion <win7?, failing download? ....  \n" );
-    return 0; /* fake success anyway */
+    return ( exitcode ); 
 }
