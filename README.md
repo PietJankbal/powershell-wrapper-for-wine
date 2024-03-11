@@ -1,9 +1,16 @@
 # powershell-wrapper for wine
 
-Wrapper for powershell.exe from wine, that gets Waves Central in wine a bit going.
-Uses pwsh.exe from Powershell Core to get at least some functionality for powershell.exe from wine.
+Wrapper for powershell.exe from wine ( this gets for example Waves Central in wine a bit going ).
 
-Note: This is minimal powershell for Waves Central; If you are looking for more feature-rich powershell in wine see https://github.com/PietJankbal/Chocolatey-for-wine
+Uses pwsh.exe from Powershell Core to get functionality for powershell.exe from wine.
+
+Various commands fed to powershell.exe have a slightly different syntax then what pwsh.exe understands, so these commands are rewritten so pwsh.exe "understands" them.
+For example 'powershell.exe -Nologo 1+2' is internally reworked to 'pwsh.exe -Nologo -c 1+2'
+
+If the command is still incompatible with pwsh.exe there's an option to replace (parts of) the command to fix things (in profile.ps1).
+See profile.ps1 for an example: the ambigous command 'measure -s' (for which pwsh will throw an error) is replaced with 'measure -sum'
+
+Note: If you are also looking for powershell 5.1 in wine see https://github.com/PietJankbal/Chocolatey-for-wine (but that takes much more time/space to install)
 
 # Install 
 
@@ -16,6 +23,7 @@ Note: This is minimal powershell for Waves Central; If you are looking for more 
 ```
  wine install_pwshwrapper.exe
 ```
+(Takes about half a minute to install)
 
 # Notes:
 - Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. wine powershell`)
@@ -42,12 +50,7 @@ permissions issue". Run with Wine-staging >= 6.4; this bug should be fixed in up
 # Some additional remarks:
 - If you want to compile yourself instead of downloading binaries:
 
-  Build powershell:
-
-```
-i686-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell32.exe
-
-x86_64-w64-mingw32-gcc -municode  -mconsole main.c -lurlmon -luser32 -lntdll -s -o powershell64.exe
+See main.c howto compile 
 ```
   Then do (Assuming ~/.wine is where your wineprefix is)
   
