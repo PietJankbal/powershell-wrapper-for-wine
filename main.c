@@ -16,74 +16,97 @@
  *
  * Compile: // For fun I changed code from standard main(argc,*argv[]) to something like https://nullprogram.com/blog/2016/01/31/)
  * x86_64-w64-mingw32-gcc -O1 -fno-ident -fno-stack-protector -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -fwhole-program\
- -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding  main.c -lurlmon -lkernel32 -lucrtbase -luser32 -nostdlib -lshell32 -lntdll -s -o powershell64.exe
+ -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding  main.c -lurlmon -lkernel32 -lucrtbase -nostdlib -lshell32 -lshlwapi -s -o powershell64.exe
  * i686-w64-mingw32-gcc -O1 -fno-ident -fno-stack-protector -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -falign-functions=1 -falign-jumps=1 -falign-loops=1 -fwhole-program\
- -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding main.c -lurlmon -lkernel32 -lucrtbase -luser32 -nostdlib -lshell32 -lntdll -s -o powershell32.exe
+ -mconsole -municode -mno-stack-arg-probe -Xlinker --stack=0x200000,0x200000 -nostdlib  -Wall -Wextra -ffreestanding main.c -lurlmon -lkernel32 -lucrtbase -nostdlib -lshell32 -lshlwapi -s -o powershell32.exe
  */
  
 #include <windows.h>
 #include <winternl.h> 
 #include <stdio.h>
+#include "shlwapi.h"
 
 static inline BOOL is_single_or_last_option (WCHAR *opt)
 {
-    return ( ( ( !_wcsnicmp( opt, L"-c", 2 ) && _wcsnicmp( opt, L"-config", 7 ) ) || !_wcsnicmp( opt, L"-n", 2 ) || !_wcsnicmp( opt, L"-enc", 4 ) ||\
-                 !_wcsnicmp( opt, L"-m", 2 ) || !_wcsnicmp( opt, L"-s", 2 )  || !wcscmp( opt, L"-" ) || !_wcsnicmp( opt, L"-f", 2 ) ) ? TRUE : FALSE );
+    return ( ( ( !_wcsnicmp( opt, L"-c", 2 ) && _wcsnicmp( opt, L"-config", 7 ) ) || !_wcsnicmp( opt, L"-n", 2 ) || !_wcsnicmp( opt, L"-f", 2 ) ||\
+                 !wcscmp( opt, L"-" ) || !_wcsnicmp( opt, L"-enc", 4 ) || !_wcsnicmp( opt, L"-m", 2 ) || !_wcsnicmp( opt, L"-s", 2 ) ) ? TRUE : FALSE );
+}
+/* Following function taken from https://creativeandcritical.net/downloads/replacebench.c which is in public domain; Credits to the there mentioned authors*/
+/* replaces in the string "str" all the occurrences of the string "sub" with the string "rep" */
+static inline wchar_t* replace_smart (wchar_t *str, wchar_t *sub, wchar_t *rep)
+{
+    size_t slen = wcslen(sub); size_t rlen = wcslen(rep);
+    size_t size = wcslen(str) + 1;
+    size_t diff = rlen - slen;
+    size_t capacity = (diff>0 && slen) ? 2 * size : size;
+    wchar_t *buf = (wchar_t *)HeapAlloc(GetProcessHeap(),8,sizeof(wchar_t)*capacity);
+    wchar_t *find, *b = buf;
+
+    if (b == NULL) return NULL;
+    if (slen == 0) return memcpy(b, str, sizeof(wchar_t)*size);
+
+    while( ( find = StrStrIW( str , sub ) ) ) { /* do case insensitive search */
+        if ((size += diff) > capacity) {
+            wchar_t *ptr = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, capacity = 2 * size*sizeof(wchar_t));
+            if (ptr == NULL) {HeapFree(GetProcessHeap(), 0, buf); return NULL;}
+            b = ptr + (b - buf);
+            buf = ptr;
+        }
+        memcpy(b, str, (find - str) * sizeof(wchar_t)); /* copy up to occurrence */
+        b += find - str;
+        memcpy(b, rep, rlen * sizeof(wchar_t));       /* add replacement */
+        b += rlen;
+        str = find + slen;
+    }
+    memcpy(b, str, (size - (b - buf)) * sizeof(wchar_t));
+    b = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, size * sizeof(wchar_t));         /* trim to size */
+    return b ? b : buf;
 }
 
 __attribute__((externally_visible))  /* for -fwhole-program */
 int mainCRTStartup(void)
 {
     BOOL read_from_stdin = FALSE, ps_console = FALSE;
-    wchar_t conemu_pathW[MAX_PATH]=L"", cmdlineW[4096]=L"", pwsh_pathW[MAX_PATH] =L"", bufW[MAX_PATH] = L" /i ", drive[MAX_PATH] , dir[_MAX_FNAME], filenameW[_MAX_FNAME], **argv;;
+    wchar_t cmdlineW[4096]=L"", pwsh_pathW[MAX_PATH] =L"", bufW[MAX_PATH] = L"", **argv;;
     DWORD exitcode;       
     STARTUPINFOW si = {0};
     PROCESS_INFORMATION pi = {0};
     int i = 1, j = 1, argc;
     
     argv = CommandLineToArgvW ( GetCommandLineW(), &argc);
-    _wsplitpath( argv[0], drive, dir, filenameW, NULL );
-
     ExpandEnvironmentStringsW(L"%ProgramW6432%\\Powershell\\7\\pwsh.exe", pwsh_pathW, MAX_PATH+1);
-    ExpandEnvironmentStringsW(L"%SystemDrive%\\ConEmu\\ConEmu64.exe", conemu_pathW, MAX_PATH+1);
+
     /* Download and Install */
     if ( GetFileAttributesW( pwsh_pathW ) == INVALID_FILE_ATTRIBUTES ) /* Download and install*/
     {    
-        WCHAR tmpW[MAX_PATH], profile_pathW[MAX_PATH], msiexecW[MAX_PATH];
-    
-        if( !ExpandEnvironmentStringsW( L"%ProgramW6432%\\Powershell\\7\\profile.ps1", profile_pathW, MAX_PATH + 1 ) ) goto failed; /* win32 only apparently, not supported... */
-        if( !ExpandEnvironmentStringsW( L"%winsysdir%\\msiexec.exe", msiexecW, MAX_PATH + 1 ) ) goto failed;
-        
-        GetTempPathW( MAX_PATH, tmpW );
-        fputs("\033[1;93mDownloading Powershell Core\033[0m",stderr);
-        if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/PowerShell-7.4.1-win-x64.msi", lstrcatW( tmpW, L"PowerShell-7.4.1-win-x64.msi"), 0, NULL ) != S_OK )
+        ExpandEnvironmentStringsW( L"%TMP%\\PowerShell-7.4.1-win-x64.msi", bufW, MAX_PATH + 1 );
+        fputws(L"\033[1;33mDownloading Powershell Core",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/PowerShell-7.4.1-win-x64.msi", bufW, 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
    
         memset( &si, 0, sizeof( STARTUPINFO )); si.cb = sizeof( STARTUPINFO ); memset( &pi, 0, sizeof( PROCESS_INFORMATION ));
-        GetTempPathW( MAX_PATH, tmpW );
-        CreateProcessW( msiexecW, lstrcatW( lstrcatW( lstrcatW( bufW, tmpW ), L"PowerShell-7.4.1-win-x64.msi"), L" ENABLE_PSREMOTING=1 REGISTER_MANIFEST=1  /q") , 0, 0, 0, 0, 0, 0, &si, &pi);
+        ExpandEnvironmentStringsW( L"%winsysdir%\\msiexec.exe /i %TMP%\\PowerShell-7.4.1-win-x64.msi ENABLE_PSREMOTING=1 REGISTER_MANIFEST=1  /q", bufW, MAX_PATH + 1 );
+        CreateProcessW( NULL, bufW , 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );   
             
-        GetTempPathW( MAX_PATH,tmpW );
-        fputs("\033[1;93mDownloading ConEmu\033[0m",stderr);
-        if( URLDownloadToFileW( NULL, L"https://github.com/Maximus5/ConEmu/releases/download/v23.07.24/ConEmuPack.230724.7z", lstrcatW( tmpW, L"ConEmuPack.230724.7z" ), 0, NULL ) != S_OK )
+        ExpandEnvironmentStringsW( L"%TMP%\\ConEmuPack.230724.7z", bufW, MAX_PATH + 1 );
+        fputws(L"\033[1;33mDownloading ConEmu",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        if( URLDownloadToFileW( NULL, L"https://github.com/Maximus5/ConEmu/releases/download/v23.07.24/ConEmuPack.230724.7z", bufW, 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }         
 
-        GetTempPathW( MAX_PATH,tmpW );
-        //fputs( "\033[1;93mDownloading  Conemu\033[0m\n", stdout );
-        if( URLDownloadToFileW( NULL, L"https://www.7-zip.org/a/7zr.exe", lstrcatW( tmpW, L"7zr.exe" ), 0, NULL ) != S_OK )
-            { fputs("download failed",stderr ); exit(1); }
-
-        if( !ExpandEnvironmentStringsW( L"%SystemDrive%\\ConEmu", bufW, MAX_PATH + 1 ) ) goto failed; 
-        if( !ExpandEnvironmentStringsW( L"%TMP%\\ConEmuPack.230724.7z", msiexecW, MAX_PATH + 1 ) ) goto failed; 
+        ExpandEnvironmentStringsW( L"%TMP%\\7zr.exe", bufW, MAX_PATH + 1 );
+        fputws(L"\033[1;33mDownloading 7zr",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        if( URLDownloadToFileW( NULL, L"https://www.7-zip.org/a/7zr.exe", bufW, 0, NULL ) != S_OK ) 
+            { fputs("download failed",stderr ); exit(1); }  
 
         memset( &si, 0, sizeof( STARTUPINFO ) ); si.cb = sizeof( STARTUPINFO ); memset( &pi , 0, sizeof( PROCESS_INFORMATION ) );
-        /*GetTempPathW( MAX_PATH, tmpW ); bufW[0] = 0;*/
-        CreateProcessW( NULL, lstrcatW( lstrcatW( lstrcatW( lstrcatW( lstrcatW(tmpW, L" x "), msiexecW ), L" -o\"" ), bufW) , L"\"" ), 0, 0, 0, 0, 0, 0, &si, &pi);
+        ExpandEnvironmentStringsW( L"%TMP%\\7zr.exe x %TMP%\\ConEmuPack.230724.7z -o\"%SystemDrive%\\ConEmu\"", bufW, MAX_PATH + 1 );
+        CreateProcessW( NULL, bufW, 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread ); 
       
-        //fputs( "\033[1;93mDownloading  PowerShell-7.4.1-win-x64.msi\033[0m\n", stdout );
-        if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", profile_pathW, 0, NULL) != S_OK )
+        fputws(L"\033[1;33mDownloading profile.ps1",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        ExpandEnvironmentStringsW( L"%ProgramW6432%\\Powershell\\7\\profile.ps1", bufW, MAX_PATH + 1 );
+        if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", bufW, 0, NULL) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
         ps_console = TRUE;
         goto exec;
@@ -100,7 +123,7 @@ int mainCRTStartup(void)
     }
     /* now insert a '-c' (if necessary) */
     if ( argv[i] && _wcsnicmp( argv[i-1], L"-c", 2 ) && _wcsnicmp( argv[i-1], L"-enc", 4 ) && _wcsnicmp( argv[i-1], L"-f", 2 ) && _wcsnicmp( argv[i], L"/c", 2 ) )
-        wcscat( wcscat( cmdlineW, L" " ), L"-c " );
+        wcscat( cmdlineW, L" -c " );
     /* concatenate the rest of the arguments into the new cmdline */
     for( j = i; j < argc; j++ ) wcscat( wcscat( cmdlineW, L" " ), argv[j] );
     /* support pipeline to handle something like " '$(get-date) | powershell - ' */
@@ -118,62 +141,31 @@ int mainCRTStartup(void)
     if ( i == argc && !read_from_stdin ) ps_console = TRUE;
     /* replace incompatible commands/strings in the cmdline fed to pwsh.exe; see profile.ps1 howto replace */
     if ( GetEnvironmentVariableW( L"PSHACKS", bufW, MAX_PATH + 1 ) ) {
-    /* Following function taken from https://creativeandcritical.net/downloads/replacebench.c which is in public domain; Credits to the there mentioned authors*/
-    /* replaces in the string "str" all the occurrences of the string "sub" with the string "rep" */
-    wchar_t* replace_smart (const wchar_t *str, const wchar_t *sub, const wchar_t *rep)
-    {
-        size_t slen = lstrlenW(sub); size_t rlen = lstrlenW(rep);
-        size_t size = lstrlenW(str) + 1;
-        size_t diff = rlen - slen;
-        size_t capacity = (diff>0 && slen) ? 2 * size : size;
-        wchar_t *buf = (wchar_t *)HeapAlloc(GetProcessHeap(),8,sizeof(wchar_t)*capacity);
-        wchar_t *find, *b = buf;
 
-        if (b == NULL) return NULL;
-        if (slen == 0) return memcpy(b, str, sizeof(wchar_t)*size);
+        WCHAR buf_fromW[MAX_PATH];WCHAR buf_toW[MAX_PATH]; WCHAR *buf_replacedW=NULL;
 
-        while((find = /*strstrW*/(wchar_t *)wcsstr((const wchar_t *)str, (const wchar_t *)sub))) {
-            if ((size += diff) > capacity) {
-            wchar_t *ptr = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, capacity = 2 * size*sizeof(wchar_t));
-            if (ptr == NULL) {HeapFree(GetProcessHeap(), 0, buf); return NULL;}
-            b = ptr + (b - buf);
-            buf = ptr;
-        }
-        memcpy(b, str, (find - str) * sizeof(wchar_t)); /* copy up to occurrence */
-        b += find - str;
-        memcpy(b, rep, rlen * sizeof(wchar_t));       /* add replacement */
-        b += rlen;
-        str = find + slen;
-        }
-        memcpy(b, str, (size - (b - buf)) * sizeof(wchar_t));
-        b = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, size * sizeof(wchar_t));         /* trim to size */
-        return b ? b : buf;
-    }
+        if (GetEnvironmentVariableW( L"PS_FROM", buf_fromW, MAX_PATH + 1 ) && GetEnvironmentVariableW( L"PS_TO", buf_toW, MAX_PATH + 1 )) {
+            wchar_t *bufferA, *bufferB = 0;
 
-    WCHAR buf_fromW[MAX_PATH];WCHAR buf_toW[MAX_PATH]; WCHAR *buf_replacedW=NULL;
+            wchar_t* tokenA = wcstok_s(buf_fromW, L"¶", &bufferA); /* Use ¶ as separator, it will likely never show up in a command */
+            wchar_t* tokenB = wcstok_s(buf_toW, L"¶", &bufferB);
 
-    if (GetEnvironmentVariableW( L"PS_FROM", buf_fromW, MAX_PATH + 1 ) && GetEnvironmentVariableW( L"PS_TO", buf_toW, MAX_PATH + 1 )) {
-        wchar_t *bufferA, *bufferB = 0;
+            while (tokenA && tokenB) {
+                buf_replacedW = replace_smart(cmdlineW, tokenA, tokenB);
+                wcscpy( cmdlineW, buf_replacedW ); HeapFree(GetProcessHeap(), 0, buf_replacedW);
 
-        wchar_t* tokenA = wcstok_s(buf_fromW, L"¶", &bufferA); /* Use ¶ as separator, it will likely never show up in a command */
-        wchar_t* tokenB = wcstok_s(buf_toW, L"¶", &bufferB);
-
-        while (tokenA && tokenB) {
-            buf_replacedW = replace_smart(cmdlineW, tokenA, tokenB);
-            lstrcpyW( cmdlineW, buf_replacedW ); HeapFree(GetProcessHeap(), 0, buf_replacedW);
-
-            tokenA = wcstok_s(NULL, L"¶", &bufferA);
-            tokenB = wcstok_s(NULL, L"¶", &bufferB);
+                tokenA = wcstok_s(NULL, L"¶", &bufferA);
+                tokenB = wcstok_s(NULL, L"¶", &bufferB);
+            }
         }
     }
-    }
-      
-exec: 
-    bufW[0] = 0; /* Execute the command through pwsh.exe (or start PSconsole via ConEmu if no command found) */
-    CreateProcessW( pwsh_pathW, !ps_console ? cmdlineW : wcscat( wcscat ( wcscat( wcscat( wcscat( \
-                    bufW, L" -c " ) , conemu_pathW ) , L" -NoUpdate -LoadRegistry -run "), pwsh_pathW ), cmdlineW ), 0, 0, 0, 0, 0, 0, &si, &pi );
+    /* fputws(L"\033[1;33mcmdline:",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr); */
+exec:
+    /* Execute the command through pwsh.exe (or start PSconsole via ConEmu if no command found) */
+    ExpandEnvironmentStringsW( L" -c %SystemDrive%\\ConEmu\\ConEmu64.exe -NoUpdate -LoadRegistry -run %ProgramW6432%\\Powershell\\7\\pwsh.exe ", bufW, MAX_PATH+1);
+    CreateProcessW( pwsh_pathW, !ps_console ? cmdlineW : wcscat( bufW , cmdlineW ), 0, 0, 0, 0, 0, 0, &si, &pi );
     WaitForSingleObject( pi.hProcess, INFINITE ); GetExitCodeProcess( pi.hProcess, &exitcode ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );    
     LocalFree(argv);
-failed:
+
     return ( exitcode ); 
 }
