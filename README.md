@@ -2,7 +2,7 @@
 
 Wrapper for powershell.exe from wine ( this gets for example Waves Central in wine a bit going ).
 
-Uses pwsh.exe from Powershell Core to get functionality for powershell.exe from wine.
+Uses pwsh.exe from Powershell Core to get functionality for powershell.exe in wine:
 
 Various commands fed to powershell.exe have a slightly different syntax then what pwsh.exe understands, so these commands are rewritten so pwsh.exe "understands" them.
 For example 'powershell.exe -Nologo 1+2' is internally reworked to 'pwsh.exe -Nologo -c 1+2'
