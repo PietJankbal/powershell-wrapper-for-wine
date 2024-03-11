@@ -48,11 +48,10 @@ permissions issue". Run with Wine-staging >= 6.4; this bug should be fixed in up
 
 
 # Some additional remarks:
-- If you want to compile yourself instead of downloading binaries:
-
+If you want to compile yourself instead of downloading binaries:
 See main.c howto compile 
-```
-  Then do (Assuming ~/.wine is where your wineprefix is)
+
+Then do (Assuming ~/.wine is where your wineprefix is)
   
 ```
 cp -rf ./powershell64.exe ~/.wine/drive_c/windows/system32/WindowsPowerShell/v1.0/powershell.exe
