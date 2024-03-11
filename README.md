@@ -23,12 +23,9 @@ Note: If you are also looking for powershell 5.1 in wine see https://github.com/
 ```
  wine install_pwshwrapper.exe
 ```
-(Takes about half a minute to install)
-
-# Notes:
-- Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. wine powershell`)
-  (ConEmu is installed to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780)
-- For an unattended install you could do (thanks brunoais for the tip):
+Powershell Core (and ConEmu) are downloaded and installed at first invokation of powershell (i.e. wine powershell`)
+(ConEmu is installed to work around bug https://bugs.winehq.org/show_bug.cgi?id=49780)
+For an unattended install you could do (thanks brunoais for the tip):
 
 ```
 wget https://github.com/PietJankbal/powershell-wrapper-for-wine/raw/master/install_pwshwrapper.exe
