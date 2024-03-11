@@ -14,6 +14,8 @@ $path = $env:PSModulePath -split ';' ; $env:PSModulePath  = ( $path | Select-Obj
 [System.Environment]::SetEnvironmentVariable('PS_TO',' measure -sum ¶ Write-Host FIXME stub!! ','User')
 #End hacks
 
+if(!(Test-Path "HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe")) {New-Item  -Path "HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe" -force
+New-ItemProperty -Path 'HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe' -Name 'Version' -Value 'win81' -PropertyType 'String' -force }
 #Register-WMIEvent not available in PS Core, so for now just change into noop
 function Register-WMIEvent
 {
