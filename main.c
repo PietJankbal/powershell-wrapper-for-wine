@@ -45,7 +45,7 @@ static inline wchar_t* replace_smart (wchar_t *str, wchar_t *sub, wchar_t *rep)
     if (b == NULL) return NULL;
     if (slen == 0) return memcpy(b, str, sizeof(wchar_t)*size);
 
-    while( ( find = StrStrIW( str , sub ) ) ) { /* do case insensitive search */
+    while ( ( find = StrStrIW( str , sub ) ) ) { /* do case insensitive search */
         if ((size += diff) > capacity) {
             wchar_t *ptr = (wchar_t *)HeapReAlloc(GetProcessHeap(), 0, buf, capacity = 2 * size*sizeof(wchar_t));
             if (ptr == NULL) {HeapFree(GetProcessHeap(), 0, buf); return NULL;}
@@ -71,7 +71,7 @@ int mainCRTStartup(void)
     DWORD exitcode;       
     STARTUPINFOW si = {0};
     PROCESS_INFORMATION pi = {0};
-    int i = 1, j = 1, argc;
+    int i, j, argc;
     
     argv = CommandLineToArgvW ( GetCommandLineW(), &argc);
     ExpandEnvironmentStringsW(L"%ProgramW6432%\\Powershell\\7\\pwsh.exe", pwsh_pathW, MAX_PATH+1);
@@ -108,9 +108,7 @@ int mainCRTStartup(void)
         ExpandEnvironmentStringsW( L"%ProgramW6432%\\Powershell\\7\\profile.ps1", bufW, MAX_PATH + 1 );
         if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", bufW, 0, NULL) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
-        ps_console = TRUE;
-        goto exec;
-    } 
+    }
     /* Main program: wrap the original powershell-commandline into correct syntax, and send it to pwsh.exe */ 
     /* pwsh requires a command option "-c" , powershell doesn`t, so we have to insert it somewhere e.g. 'powershell -nologo 2+1' should go into 'powershell -nologo -c 2+1'*/ 
     for (i = 1;  argv[i] &&  !wcsncmp(  argv[i], L"-" , 1 ); i++ ) { if ( !is_single_or_last_option ( argv[i] ) ) i++; if(!argv[i]) break;} /* Search for 1st argument after options */
@@ -131,14 +129,15 @@ int mainCRTStartup(void)
         WCHAR defline[8192]; wint_t wc; char line[8192] = " \"&  {" ; /* embed cmd in scriptblock */ int m = strlen(line) - 1;
         HANDLE input = GetStdHandle(STD_INPUT_HANDLE); DWORD type = GetFileType(input);
         /* handle pipe */
-        if ( type == FILE_TYPE_CHAR ) goto exec; /* not redirected (FILE_TYPE_PIPE or FILE_TYPE_DISK) */
-        if( !wcscmp(argv[argc-1], L"-" ) && _wcsnicmp(argv[argc-2], L"-c", 2 ) ) wcscat(cmdlineW, L" -c ");
-        while( ( wc = fgetc(stdin) ) != WEOF ) line[++m] = wc;
-        line[++m] = '}';line[++m] = '"';line[++m] = '\0'; 
-        mbstowcs(defline, line, 8192);
-        wcscat(cmdlineW, defline);
+        if ( type != FILE_TYPE_CHAR ) { /* not redirected (FILE_TYPE_PIPE or FILE_TYPE_DISK) */
+            if( !wcscmp(argv[argc-1], L"-" ) && _wcsnicmp(argv[argc-2], L"-c", 2 ) ) wcscat(cmdlineW, L" -c ");
+            while( ( wc = fgetc(stdin) ) != WEOF ) line[++m] = wc;
+            line[++m] = '}';line[++m] = '"';line[++m] = '\0'; 
+            mbstowcs(defline, line, 8192);
+            wcscat(cmdlineW, defline);
+        }
     } /* end support pipeline */
-    if ( i == argc && !read_from_stdin ) ps_console = TRUE;
+    if ( ( i == argc ) && !read_from_stdin ) ps_console = TRUE;
     /* replace incompatible commands/strings in the cmdline fed to pwsh.exe; see profile.ps1 howto replace */
     if ( GetEnvironmentVariableW( L"PSHACKS", bufW, MAX_PATH + 1 ) ) {
 
@@ -160,12 +159,11 @@ int mainCRTStartup(void)
         }
     }
     /* fputws(L"\033[1;33mcmdline:",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr); */
-exec:
     /* Execute the command through pwsh.exe (or start PSconsole via ConEmu if no command found) */
-    ExpandEnvironmentStringsW( L" -c %SystemDrive%\\ConEmu\\ConEmu64.exe -NoUpdate -LoadRegistry -run %ProgramW6432%\\Powershell\\7\\pwsh.exe ", bufW, MAX_PATH+1);
-    CreateProcessW( pwsh_pathW, !ps_console ? cmdlineW : wcscat( bufW , cmdlineW ), 0, 0, 0, 0, 0, 0, &si, &pi );
+    if ( ps_console ) ExpandEnvironmentStringsW( L" -c %SystemDrive%\\ConEmu\\ConEmu64.exe -NoUpdate -LoadRegistry -run %ProgramW6432%\\Powershell\\7\\pwsh.exe ", bufW, MAX_PATH+1);
+    CreateProcessW( pwsh_pathW, ps_console ? wcscat( bufW , cmdlineW ) : cmdlineW, 0, 0, 0, 0, 0, 0, &si, &pi );
     WaitForSingleObject( pi.hProcess, INFINITE ); GetExitCodeProcess( pi.hProcess, &exitcode ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );    
     LocalFree(argv);
-
-    return ( exitcode ); 
+    
+    exit ( exitcode ); 
 }
