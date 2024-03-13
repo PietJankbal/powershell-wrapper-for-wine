@@ -16,6 +16,14 @@ $path = $env:PSModulePath -split ';' ; $env:PSModulePath  = ( $path | Select-Obj
 
 if(!(Test-Path "HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe")) {New-Item  -Path "HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe" -force
 New-ItemProperty -Path 'HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe' -Name 'Version' -Value 'win81' -PropertyType 'String' -force }
+
+if(!(Test-Path "HKCU:\\Software\\ConEmu\\.Vanilla")) {New-Item  -Path "HKCU:\\Software\\ConEmu\\.Vanilla" -force}
+if (!(Get-ItemProperty 'HKCU:\\Software\\ConEmu\\.Vanilla').PSObject.Properties.Name -contains 'ColorTable00') {
+    New-ItemProperty -Path 'HKCU:\\Software\\ConEmu\\.Vanilla' -Name 'ColorTable00' -Value '0x00562401' -PropertyType 'DWORD' -force}
+if (!(Get-ItemProperty 'HKCU:\\Software\\ConEmu\\.Vanilla').PSObject.Properties.Name -contains 'ColorTable00') {
+    New-ItemProperty -Path 'HKCU:\\Software\\ConEmu\\.Vanilla' -Name 'ColorTable14' -Value '0x0000ffff' -PropertyType 'DWORD' -force }
+
+
 #Register-WMIEvent not available in PS Core, so for now just change into noop
 function Register-WMIEvent
 {
