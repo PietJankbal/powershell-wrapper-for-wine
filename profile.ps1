@@ -20,7 +20,7 @@ New-ItemProperty -Path 'HKCU:\\Software\\Wine\\AppDefaults\\ConEmu64.exe' -Name 
 if(!(Test-Path "HKCU:\\Software\\ConEmu\\.Vanilla")) {New-Item  -Path "HKCU:\\Software\\ConEmu\\.Vanilla" -force}
 if (!(Get-ItemProperty 'HKCU:\\Software\\ConEmu\\.Vanilla').PSObject.Properties.Name -contains 'ColorTable00') {
     New-ItemProperty -Path 'HKCU:\\Software\\ConEmu\\.Vanilla' -Name 'ColorTable00' -Value '0x00562401' -PropertyType 'DWORD' -force}
-if (!(Get-ItemProperty 'HKCU:\\Software\\ConEmu\\.Vanilla').PSObject.Properties.Name -contains 'ColorTable00') {
+if (!(Get-ItemProperty 'HKCU:\\Software\\ConEmu\\.Vanilla').PSObject.Properties.Name -contains 'ColorTable14') {
     New-ItemProperty -Path 'HKCU:\\Software\\ConEmu\\.Vanilla' -Name 'ColorTable14' -Value '0x0000ffff' -PropertyType 'DWORD' -force }
 
 
