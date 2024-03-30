@@ -80,7 +80,7 @@ int mainCRTStartup(void)
     if ( GetFileAttributesW( pwsh_pathW ) == INVALID_FILE_ATTRIBUTES ) /* Download and install*/
     {    
         ExpandEnvironmentStringsW( L"%TMP%\\PowerShell-7.4.1-win-x64.msi", bufW, MAX_PATH + 1 );
-        fputws(L"\033[1;33mDownloading Powershell Core",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        fputws(L"\033[1;33mDownloading Powershell Core",stderr);fputws(L"\033[0m\n",stderr);
         if( URLDownloadToFileW( NULL, L"https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/PowerShell-7.4.1-win-x64.msi", bufW, 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
    
@@ -90,12 +90,12 @@ int mainCRTStartup(void)
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread );   
             
         ExpandEnvironmentStringsW( L"%TMP%\\ConEmuPack.230724.7z", bufW, MAX_PATH + 1 );
-        fputws(L"\033[1;33mDownloading ConEmu",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        fputws(L"\033[1;33mDownloading ConEmu",stderr);fputws(L"\033[0m\n",stderr);
         if( URLDownloadToFileW( NULL, L"https://github.com/Maximus5/ConEmu/releases/download/v23.07.24/ConEmuPack.230724.7z", bufW, 0, NULL ) != S_OK )
             { fputs("download failed",stderr ); exit(1); }         
 
         ExpandEnvironmentStringsW( L"%TMP%\\7zr.exe", bufW, MAX_PATH + 1 );
-        fputws(L"\033[1;33mDownloading 7zr",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        fputws(L"\033[1;33mDownloading 7zr",stderr);fputws(L"\033[0m\n",stderr);
         if( URLDownloadToFileW( NULL, L"https://www.7-zip.org/a/7zr.exe", bufW, 0, NULL ) != S_OK ) 
             { fputs("download failed",stderr ); exit(1); }  
 
@@ -104,7 +104,7 @@ int mainCRTStartup(void)
         CreateProcessW( NULL, bufW, 0, 0, 0, 0, 0, 0, &si, &pi);
         WaitForSingleObject( pi.hProcess, INFINITE ); CloseHandle( pi.hProcess ); CloseHandle( pi.hThread ); 
       
-        fputws(L"\033[1;33mDownloading profile.ps1",stderr);fputws(cmdlineW,stderr);fputws(L"\033[0m\n",stderr);
+        fputws(L"\033[1;33mDownloading profile.ps1",stderr);fputws(L"\033[0m\n",stderr);
         ExpandEnvironmentStringsW( L"%ProgramW6432%\\Powershell\\7\\profile.ps1", bufW, MAX_PATH + 1 );
         if( URLDownloadToFileW(NULL, L"https://raw.githubusercontent.com/PietJankbal/powershell-wrapper-for-wine/master/profile.ps1", bufW, 0, NULL) != S_OK )
             { fputs("download failed",stderr ); exit(1); }
@@ -125,16 +125,14 @@ int mainCRTStartup(void)
     /* concatenate the rest of the arguments into the new cmdline */
     for( j = i; j < argc; j++ ) wcscat( wcscat( cmdlineW, L" " ), argv[j] );
     /* support pipeline to handle something like " '$(get-date) | powershell - ' */
-    if( read_from_stdin ) {
-        WCHAR defline[8192]; wint_t wc; char line[8192] = " \"&  {" ; /* embed cmd in scriptblock */ int m = strlen(line) - 1;
+    if( read_from_stdin ) { 
+        WCHAR defline[4096]; char line[4096];
         HANDLE input = GetStdHandle(STD_INPUT_HANDLE); DWORD type = GetFileType(input);
         /* handle pipe */
         if ( type != FILE_TYPE_CHAR ) { /* not redirected (FILE_TYPE_PIPE or FILE_TYPE_DISK) */
             if( !wcscmp(argv[argc-1], L"-" ) && _wcsnicmp(argv[argc-2], L"-c", 2 ) ) wcscat(cmdlineW, L" -c ");
-            while( ( wc = fgetc(stdin) ) != WEOF ) line[++m] = wc;
-            line[++m] = '}';line[++m] = '"';line[++m] = '\0'; 
-            mbstowcs(defline, line, 8192);
-            wcscat(cmdlineW, defline);
+            wcscat(cmdlineW, L" ");
+            while( fgets(line, 4096, stdin) != NULL ) { mbstowcs(defline, line, 4096); wcscat(cmdlineW, defline);}
         }
     } /* end support pipeline */
     if ( ( i == argc ) && !read_from_stdin ) ps_console = TRUE;
